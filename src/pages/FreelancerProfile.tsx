@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,9 +14,11 @@ import {
 } from "@/components/ui/select";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft } from "lucide-react";
 
 const FreelancerProfile = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     expertise: "",
@@ -204,8 +207,15 @@ const FreelancerProfile = () => {
                 <Button type="submit" size="lg" className="flex-1">
                   Create Profile
                 </Button>
-                <Button type="button" variant="outline" size="lg" className="flex-1">
-                  Cancel
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="lg" 
+                  className="flex-1"
+                  onClick={() => navigate("/register")}
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
                 </Button>
               </div>
             </form>
