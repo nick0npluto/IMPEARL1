@@ -25,10 +25,6 @@ const Index = () => {
               IMPEARL
             </span>
           </h1>
-          <p className="text-xl text-gray-200 mb-8 max-w-3xl mx-auto">
-            IMPEARL helps businesses identify their needs, recommend automation tools, and connect
-            with skilled freelancers.
-          </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="hero" size="lg" asChild>
               <Link to="/features">
