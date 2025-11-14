@@ -12,6 +12,13 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import BusinessProfile from "./pages/BusinessProfile";
 import FreelancerProfile from "./pages/FreelancerProfile";
+import Marketplace from "./pages/Marketplace";
+import FreelancerDetail from "./pages/FreelancerDetail";
+import CompareFreelancers from "./pages/CompareFreelancers";
+import EditProfile from "./pages/EditProfile";
+import PostJob from "./pages/PostJob";
+import BrowseJobs from "./pages/BrowseJobs";
+import CostCalculator from "./pages/CostCalculator";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +37,18 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register/business" element={<BusinessProfile />} />
           <Route path="/register/freelancer" element={<FreelancerProfile />} />
+          
+          {/* Marketplace Routes */}
+          <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/freelancer/:id" element={<FreelancerDetail />} />
+          <Route path="/compare" element={<CompareFreelancers />} />
+          
+          {/* Dashboard Feature Routes */}
+          <Route path="/profile" element={<EditProfile />} />
+          <Route path="/post-job" element={<PostJob />} />
+          <Route path="/jobs" element={<BrowseJobs />} />
+          <Route path="/calculator" element={<CostCalculator />} />
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

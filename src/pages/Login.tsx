@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,15 +7,18 @@ import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import ApiService from "@/services/api";
 
 const Login = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.email || !formData.password) {
@@ -26,13 +30,36 @@ const Login = () => {
       return;
     }
 
-    // Here you would connect to your MongoDB backend
-    console.log("Login Data:", formData);
-    
-    toast({
-      title: "Logged In!",
-      description: "You have been logged in successfully.",
-    });
+    setLoading(true);
+
+    try {
+      const response = await ApiService.login(formData.email, formData.password);
+      
+      toast({
+        title: "Success",
+        description: "You have been logged in successfully.",
+      });
+
+      // Redirect based on user type and profile completion
+      if (response.user.hasProfile) {
+        navigate('/dashboard');
+      } else {
+        // Redirect to profile creation
+        if (response.user.userType === 'freelancer') {
+          navigate('/register/freelancer');
+        } else {
+          navigate('/register/business');
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid email or password.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -64,6 +91,7 @@ const Login = () => {
                   placeholder="Enter your email"
                   className="mt-2"
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -79,11 +107,12 @@ const Login = () => {
                   placeholder="Enter your password"
                   className="mt-2"
                   required
+                  disabled={loading}
                 />
               </div>
 
-              <Button type="submit" size="lg" className="w-full">
-                Log In
+              <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                {loading ? 'Logging in...' : 'Log In'}
               </Button>
 
               <div className="text-center text-sm text-muted-foreground">

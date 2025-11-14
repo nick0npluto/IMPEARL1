@@ -15,10 +15,12 @@ import {
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
+import ApiService from "@/services/api";
 
 const BusinessProfile = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     businessName: "",
     industry: "",
@@ -29,7 +31,7 @@ const BusinessProfile = () => {
     description: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
@@ -42,13 +44,27 @@ const BusinessProfile = () => {
       return;
     }
 
-    // Here you would connect to your MongoDB backend
-    console.log("Business Profile Data:", formData);
-    
-    toast({
-      title: "Profile Created!",
-      description: "Your business profile has been saved successfully.",
-    });
+    setLoading(true);
+
+    try {
+      await ApiService.createBusinessProfile(formData);
+      
+      toast({
+        title: "Profile Created",
+        description: "Your business profile has been saved successfully.",
+      });
+
+      // Redirect to dashboard
+      navigate('/dashboard');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create profile.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,7 +84,6 @@ const BusinessProfile = () => {
 
           <Card className="p-8 animate-slide-up">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Business Name - Required */}
               <div>
                 <Label htmlFor="businessName" className="text-foreground">
                   Business Name <span className="text-destructive">*</span>
@@ -80,10 +95,10 @@ const BusinessProfile = () => {
                   placeholder="Enter your business name"
                   className="mt-2"
                   required
+                  disabled={loading}
                 />
               </div>
 
-              {/* Industry - Required */}
               <div>
                 <Label htmlFor="industry" className="text-foreground">
                   Industry <span className="text-destructive">*</span>
@@ -91,6 +106,7 @@ const BusinessProfile = () => {
                 <Select
                   value={formData.industry}
                   onValueChange={(value) => setFormData({ ...formData, industry: value })}
+                  disabled={loading}
                 >
                   <SelectTrigger className="mt-2">
                     <SelectValue placeholder="Select your industry" />
@@ -108,7 +124,6 @@ const BusinessProfile = () => {
                 </Select>
               </div>
 
-              {/* Company Size */}
               <div>
                 <Label htmlFor="companySize" className="text-foreground">
                   Company Size
@@ -116,6 +131,7 @@ const BusinessProfile = () => {
                 <Select
                   value={formData.companySize}
                   onValueChange={(value) => setFormData({ ...formData, companySize: value })}
+                  disabled={loading}
                 >
                   <SelectTrigger className="mt-2">
                     <SelectValue placeholder="Select company size" />
@@ -130,7 +146,6 @@ const BusinessProfile = () => {
                 </Select>
               </div>
 
-              {/* Goals/Objectives - Required */}
               <div>
                 <Label htmlFor="goals" className="text-foreground">
                   Goals & Objectives <span className="text-destructive">*</span>
@@ -142,10 +157,10 @@ const BusinessProfile = () => {
                   placeholder="What are your business goals and objectives?"
                   className="mt-2 min-h-[100px]"
                   required
+                  disabled={loading}
                 />
               </div>
 
-              {/* Required Skills */}
               <div>
                 <Label htmlFor="requiredSkills" className="text-foreground">
                   Required Skills
@@ -156,13 +171,13 @@ const BusinessProfile = () => {
                   onChange={(e) => setFormData({ ...formData, requiredSkills: e.target.value })}
                   placeholder="e.g., AI integration, workflow automation, data analysis"
                   className="mt-2"
+                  disabled={loading}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
                   Separate skills with commas
                 </p>
               </div>
 
-              {/* Website - Optional */}
               <div>
                 <Label htmlFor="website" className="text-foreground">
                   Website (Optional)
@@ -174,10 +189,10 @@ const BusinessProfile = () => {
                   onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                   placeholder="https://example.com"
                   className="mt-2"
+                  disabled={loading}
                 />
               </div>
 
-              {/* Description - Optional */}
               <div>
                 <Label htmlFor="description" className="text-foreground">
                   Company Description (Optional)
@@ -188,12 +203,13 @@ const BusinessProfile = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Tell us more about your company..."
                   className="mt-2 min-h-[120px]"
+                  disabled={loading}
                 />
               </div>
 
               <div className="flex gap-4">
-                <Button type="submit" size="lg" className="flex-1">
-                  Create Profile
+                <Button type="submit" size="lg" className="flex-1" disabled={loading}>
+                  {loading ? 'Creating Profile...' : 'Create Profile'}
                 </Button>
                 <Button 
                   type="button" 
@@ -201,6 +217,7 @@ const BusinessProfile = () => {
                   size="lg" 
                   className="flex-1"
                   onClick={() => navigate("/register")}
+                  disabled={loading}
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back

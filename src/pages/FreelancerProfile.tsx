@@ -15,10 +15,12 @@ import {
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
+import ApiService from "@/services/api";
 
 const FreelancerProfile = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     expertise: "",
@@ -29,7 +31,7 @@ const FreelancerProfile = () => {
     availability: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
@@ -52,13 +54,27 @@ const FreelancerProfile = () => {
       return;
     }
 
-    // Here you would connect to your MongoDB backend
-    console.log("Freelancer Profile Data:", formData);
-    
-    toast({
-      title: "Profile Created!",
-      description: "Your freelancer profile has been saved successfully.",
-    });
+    setLoading(true);
+
+    try {
+      await ApiService.createFreelancerProfile(formData);
+      
+      toast({
+        title: "Profile Created",
+        description: "Your freelancer profile has been saved successfully.",
+      });
+
+      // Redirect to dashboard
+      navigate('/dashboard');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create profile.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,7 +94,6 @@ const FreelancerProfile = () => {
 
           <Card className="p-8 animate-slide-up">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Name - Required */}
               <div>
                 <Label htmlFor="name" className="text-foreground">
                   Full Name <span className="text-destructive">*</span>
@@ -90,10 +105,10 @@ const FreelancerProfile = () => {
                   placeholder="Enter your full name"
                   className="mt-2"
                   required
+                  disabled={loading}
                 />
               </div>
 
-              {/* Expertise/Skills - Required */}
               <div>
                 <Label htmlFor="expertise" className="text-foreground">
                   Expertise & Skills <span className="text-destructive">*</span>
@@ -105,13 +120,13 @@ const FreelancerProfile = () => {
                   placeholder="e.g., AI automation, workflow design, API integration"
                   className="mt-2"
                   required
+                  disabled={loading}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
                   Separate skills with commas
                 </p>
               </div>
 
-              {/* Years of Experience - Required */}
               <div>
                 <Label htmlFor="yearsExperience" className="text-foreground">
                   Years of Experience <span className="text-destructive">*</span>
@@ -119,6 +134,7 @@ const FreelancerProfile = () => {
                 <Select
                   value={formData.yearsExperience}
                   onValueChange={(value) => setFormData({ ...formData, yearsExperience: value })}
+                  disabled={loading}
                 >
                   <SelectTrigger className="mt-2">
                     <SelectValue placeholder="Select years of experience" />
@@ -133,7 +149,6 @@ const FreelancerProfile = () => {
                 </Select>
               </div>
 
-              {/* Past Projects */}
               <div>
                 <Label htmlFor="pastProjects" className="text-foreground">
                   Past Projects
@@ -144,10 +159,10 @@ const FreelancerProfile = () => {
                   onChange={(e) => setFormData({ ...formData, pastProjects: e.target.value })}
                   placeholder="Describe your notable past projects and achievements..."
                   className="mt-2 min-h-[120px]"
+                  disabled={loading}
                 />
               </div>
 
-              {/* Portfolio Links */}
               <div>
                 <Label htmlFor="portfolioLinks" className="text-foreground">
                   Portfolio Links
@@ -158,13 +173,13 @@ const FreelancerProfile = () => {
                   onChange={(e) => setFormData({ ...formData, portfolioLinks: e.target.value })}
                   placeholder="https://portfolio.com, https://github.com/username"
                   className="mt-2"
+                  disabled={loading}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
                   Separate multiple links with commas
                 </p>
               </div>
 
-              {/* Hourly Rate */}
               <div>
                 <Label htmlFor="hourlyRate" className="text-foreground">
                   Hourly Rate (USD)
@@ -178,10 +193,10 @@ const FreelancerProfile = () => {
                   className="mt-2"
                   min="0"
                   step="0.01"
+                  disabled={loading}
                 />
               </div>
 
-              {/* Availability */}
               <div>
                 <Label htmlFor="availability" className="text-foreground">
                   Availability
@@ -189,6 +204,7 @@ const FreelancerProfile = () => {
                 <Select
                   value={formData.availability}
                   onValueChange={(value) => setFormData({ ...formData, availability: value })}
+                  disabled={loading}
                 >
                   <SelectTrigger className="mt-2">
                     <SelectValue placeholder="Select your availability" />
@@ -204,8 +220,8 @@ const FreelancerProfile = () => {
               </div>
 
               <div className="flex gap-4">
-                <Button type="submit" size="lg" className="flex-1">
-                  Create Profile
+                <Button type="submit" size="lg" className="flex-1" disabled={loading}>
+                  {loading ? 'Creating Profile...' : 'Create Profile'}
                 </Button>
                 <Button 
                   type="button" 
@@ -213,6 +229,7 @@ const FreelancerProfile = () => {
                   size="lg" 
                   className="flex-1"
                   onClick={() => navigate("/register")}
+                  disabled={loading}
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back

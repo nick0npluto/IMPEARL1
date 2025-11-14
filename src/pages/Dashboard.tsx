@@ -1,106 +1,68 @@
-import Navbar from "@/components/Navbar";
-import DashboardCard from "@/components/DashboardCard";
-import ChatInterface from "@/components/ChatInterface";
-import {
-  User,
-  Brain,
-  ShoppingCart,
-  CreditCard,
-  Bookmark,
-  Calculator,
-  MessageSquare,
-  TrendingUp,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import FreelancerDashboard from "./FreelancerDashboard";
+import ClientDashboard from "./ClientDashboard";
+import ApiService from "@/services/api";
 
 const Dashboard = () => {
-  const dashboardItems = [
-    {
-      icon: User,
-      title: "My Profile",
-      description: "Manage your business or freelancer profile",
-      link: "/dashboard",
-    },
-    {
-      icon: Brain,
-      title: "AI Recommendations",
-      description: "View personalized tool and automation suggestions",
-      link: "/dashboard",
-    },
-    {
-      icon: ShoppingCart,
-      title: "Marketplace",
-      description: "Browse and compare automation tools",
-      link: "/features",
-    },
-    {
-      icon: CreditCard,
-      title: "Pay Center",
-      description: "Manage payments and transactions",
-      link: "/dashboard",
-    },
-    {
-      icon: Bookmark,
-      title: "Bookmarked Tools",
-      description: "Your saved automation solutions",
-      link: "/dashboard",
-    },
-    {
-      icon: Calculator,
-      title: "Cost Calculator",
-      description: "Calculate ROI for your automation plans",
-      link: "/dashboard",
-    },
-    {
-      icon: MessageSquare,
-      title: "Support",
-      description: "Get help from our team and community",
-      link: "/support",
-    },
-    {
-      icon: TrendingUp,
-      title: "Analytics",
-      description: "Track your automation performance",
-      link: "/dashboard",
-    },
-  ];
+  const navigate = useNavigate();
+  const [userType, setUserType] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+  useEffect(() => {
+    // Check if user is logged in and get their type
+    const checkAuth = async () => {
+      try {
+        const token = ApiService.getToken();
+        
+        if (!token) {
+          // No token, redirect to login
+          navigate('/login');
+          return;
+        }
 
-      <section className="pt-32 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="container mx-auto">
-          <div className="mb-12 animate-fade-in">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
-              Welcome to Your Dashboard
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              Manage your automation journey from one central hub
-            </p>
-          </div>
+        // Verify token and get user info
+        const response = await ApiService.verifyToken();
+        
+        if (response.user && response.user.userType) {
+          setUserType(response.user.userType);
+        } else {
+          // Invalid token or user type, redirect to login
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        // Token verification failed, redirect to login
+        navigate('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 animate-slide-up">
-            {dashboardItems.map((item, index) => (
-              <DashboardCard
-                key={index}
-                icon={item.icon}
-                title={item.title}
-                description={item.description}
-                link={item.link}
-              />
-            ))}
-          </div>
+    checkAuth();
+  }, [navigate]);
 
-          <div className="animate-slide-up">
-            <h2 className="text-2xl md:text-3xl font-bold mb-6 text-foreground">
-              Chat with IMPEARL AI
-            </h2>
-            <ChatInterface />
-          </div>
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your dashboard...</p>
         </div>
-      </section>
-    </div>
-  );
+      </div>
+    );
+  }
+
+  // Render appropriate dashboard based on user type
+  if (userType === 'freelancer') {
+    return <FreelancerDashboard />;
+  } else if (userType === 'business') {
+    return <ClientDashboard />;
+  }
+
+  // Fallback (shouldn't reach here due to navigation in useEffect)
+  return null;
 };
 
 export default Dashboard;
