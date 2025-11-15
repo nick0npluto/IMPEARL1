@@ -24,9 +24,19 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/impearl',
 // Routes
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
+const contractRoutes = require('./routes/contracts');
+const messageRoutes = require('./routes/messages');
+const paymentRoutes = require('./routes/payments');
+const analyticsRoutes = require('./routes/analytics');
+const proposalRoutes = require('./routes/proposals');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/contracts', contractRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/proposals', proposalRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

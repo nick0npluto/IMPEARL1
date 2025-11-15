@@ -20,6 +20,13 @@ import PostJob from "./pages/PostJob";
 import BrowseJobs from "./pages/BrowseJobs";
 import CostCalculator from "./pages/CostCalculator";
 import BookmarkedFreelancers from "./pages/BookmarkedFreelancers";
+import Messages from "./pages/Messages";
+import Analytics from "./pages/Analytics";
+import PayCenter from "./pages/PayCenter";
+import MyProposals from "./pages/MyProposals";
+import ActiveProjects from "./pages/ActiveProjects";
+import Earnings from "./pages/Earnings";
+import ReviewsRatings from "./pages/ReviewsRatings";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +57,17 @@ const App = () => (
           <Route path="/post-job" element={<PostJob />} />
           <Route path="/jobs" element={<BrowseJobs />} />
           <Route path="/calculator" element={<CostCalculator />} />
+          
+          {/* New Features */}
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/pay-center" element={<PayCenter />} />
+          
+          {/* Freelancer Features */}
+          <Route path="/my-proposals" element={<MyProposals />} />
+          <Route path="/active-projects" element={<ActiveProjects />} />
+          <Route path="/earnings" element={<Earnings />} />
+          <Route path="/reviews-ratings" element={<ReviewsRatings />} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
