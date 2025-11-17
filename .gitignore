@@ -25,3 +25,4 @@ dist-ssr
 
 IMPEARL_spec.md
 .env
+server/
