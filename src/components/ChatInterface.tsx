@@ -2,24 +2,38 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Bot } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import ApiService from "@/services/api";
 
 const ChatInterface = () => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([
     { role: "assistant", content: "Hello! I'm IMPEARL AI. How can I help your business today?" }
   ]);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleSend = () => {
-    if (message.trim()) {
-      setMessages([...messages, { role: "user", content: message }]);
-      setMessage("");
-      // Simulate AI response
-      setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          { role: "assistant", content: "I'm analyzing your request. This is a demo interface - the full AI functionality will be available soon!" }
-        ]);
-      }, 1000);
+  const handleSend = async () => {
+    if (!message.trim() || loading) return;
+    const userMessage = { role: "user", content: message };
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
+    setMessage("");
+    setLoading(true);
+
+    try {
+      const response = await ApiService.sendSupportMessage(nextMessages);
+      const reply = response.reply || "I'm here to help!";
+      setMessages([...nextMessages, { role: "assistant", content: reply }]);
+    } catch (error: any) {
+      toast({
+        title: "Support unavailable",
+        description: error.message || "Unable to reach the IMPEARL assistant right now.",
+        variant: "destructive",
+      });
+      setMessages([...nextMessages, { role: "assistant", content: "I'm having trouble responding right now. Please try again in a moment." }]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,8 +70,9 @@ const ChatInterface = () => {
           onChange={(e) => setMessage(e.target.value)}
           onKeyPress={(e) => e.key === "Enter" && handleSend()}
           className="flex-1"
+          disabled={loading}
         />
-        <Button onClick={handleSend} variant="default">
+        <Button onClick={handleSend} variant="default" disabled={loading}>
           <Send className="h-4 w-4" />
         </Button>
       </div>

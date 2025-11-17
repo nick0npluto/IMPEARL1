@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -14,285 +14,325 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, DollarSign, Clock, ArrowLeft } from "lucide-react";
+import ApiService from "@/services/api";
+import { Briefcase, Users, ArrowLeft } from "lucide-react";
+
+interface FreelancerOption {
+  _id: string;
+  email: string;
+  freelancerProfile?: {
+    name: string;
+    expertise: string;
+    yearsExperience: string;
+  };
+}
+
+interface ServiceProviderOption {
+  _id: string;
+  email: string;
+  serviceProviderProfile?: {
+    companyName: string;
+    description: string;
+  };
+}
+
+type TargetType = "freelancer" | "service_provider";
 
 const PostJob = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefillAppliedRef = useRef(false);
   const { toast } = useToast();
-  const [posting, setPosting] = useState(false);
-  const [jobData, setJobData] = useState({
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [targetType, setTargetType] = useState<TargetType>("freelancer");
+  const [freelancers, setFreelancers] = useState<FreelancerOption[]>([]);
+  const [providers, setProviders] = useState<ServiceProviderOption[]>([]);
+  const [formData, setFormData] = useState({
+    targetId: "",
     title: "",
-    category: "",
     description: "",
-    requirements: "",
-    budget: "",
-    budgetType: "fixed",
-    duration: "",
-    experienceLevel: "",
-    skills: "",
+    initialPrice: "",
+    currency: "USD",
+    proposedTerms: "",
   });
+
+  useEffect(() => {
+    const loadTargets = async () => {
+      try {
+        const [freelancerRes, providerRes] = await Promise.all([
+          ApiService.getFreelancers(),
+          ApiService.getServiceProviders(),
+        ]);
+        setFreelancers(freelancerRes.freelancers || []);
+        setProviders(providerRes.providers || []);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Unable to load profiles",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTargets();
+  }, [toast]);
+
+  useEffect(() => {
+    if (prefillAppliedRef.current) return;
+    const state = location.state as { targetType?: TargetType; targetId?: string } | null;
+    if (state?.targetType) {
+      setTargetType(state.targetType);
+    }
+    if (state?.targetId) {
+      setFormData((prev) => ({ ...prev, targetId: state.targetId }));
+    }
+    if (state?.targetType || state?.targetId) {
+      prefillAppliedRef.current = true;
+    }
+  }, [location.state]);
+
+  const availableTargets = useMemo(() => {
+    return targetType === "freelancer" ? freelancers : providers;
+  }, [freelancers, providers, targetType]);
+
+  const selectedTarget = useMemo(() => {
+    return availableTargets.find((target) => target._id === formData.targetId);
+  }, [availableTargets, formData.targetId]);
+
+  const handleTargetTypeChange = (value: TargetType) => {
+    setTargetType(value);
+    setFormData((prev) => ({ ...prev, targetId: "" }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!jobData.title || !jobData.category || !jobData.description || !jobData.budget) {
+    if (!formData.targetId) {
       toast({
-        title: "Missing Fields",
-        description: "Please fill in all required fields",
+        title: "Select a target",
+        description: "Choose a freelancer or service provider to send the request",
         variant: "destructive",
       });
       return;
     }
 
-    setPosting(true);
+    if (!formData.title || !formData.description || !formData.initialPrice) {
+      toast({
+        title: "Missing information",
+        description: "Please complete the title, description, and budget fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
 
     try {
-      // TODO: Implement actual job posting API
-      // For now, save to localStorage
-      const existingJobs = JSON.parse(localStorage.getItem("jobs") || "[]");
-      const newJob = {
-        id: Date.now().toString(),
-        ...jobData,
-        postedBy: JSON.parse(localStorage.getItem("user") || "{}").id,
-        postedDate: new Date().toISOString(),
-        status: "open",
-        applications: [],
-      };
-      
-      existingJobs.push(newJob);
-      localStorage.setItem("jobs", JSON.stringify(existingJobs));
-
-      toast({
-        title: "Job Posted",
-        description: "Your job has been posted successfully!",
+      await ApiService.createEngagement({
+        targetType,
+        targetId: formData.targetId,
+        title: formData.title,
+        description: formData.description,
+        initialPrice: Number(formData.initialPrice),
+        currency: formData.currency,
+        proposedTerms: formData.proposedTerms,
       });
 
-      navigate("/my-jobs");
+      toast({
+        title: "Engagement Sent",
+        description: "Your engagement request has been sent successfully.",
+      });
+
+      navigate("/engagements");
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to post job",
+        description: error.message || "Unable to create engagement request.",
         variant: "destructive",
       });
     } finally {
-      setPosting(false);
+      setSaving(false);
     }
   };
+
+  const user = ApiService.getUser();
+  const isBusiness = user?.userType === "business";
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="container mx-auto max-w-3xl">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/dashboard")}
-            className="mb-6"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
-
-          <div className="mb-8 animate-fade-in">
-            <div className="flex items-center gap-3 mb-4">
-              <Briefcase className="h-10 w-10 text-primary" />
-              <h1 className="text-4xl font-bold text-foreground">
-                Post a Job
-              </h1>
+        <div className="container mx-auto max-w-5xl">
+          <div className="mb-8 flex items-start justify-between">
+            <div className="animate-fade-in">
+              <div className="flex items-center gap-3 mb-4">
+                <Briefcase className="h-10 w-10 text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wide">
+                    Engagement Request
+                  </p>
+                  <h1 className="text-4xl font-bold text-foreground">
+                    Connect with Talent
+                  </h1>
+                </div>
+              </div>
+              <p className="text-xl text-muted-foreground">
+                Send a detailed request to a freelancer or service provider. They can accept, decline, or counter your offer.
+              </p>
             </div>
-            <p className="text-xl text-muted-foreground">
-              Find the perfect freelancer for your project
-            </p>
+            <Button variant="ghost" onClick={() => navigate("/dashboard")}> 
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
           </div>
+
+          {!isBusiness && (
+            <Card className="mb-6 p-6">
+              <p className="text-sm text-muted-foreground">
+                Engagement requests can only be created from business accounts. Please sign in as a business to use this feature.
+              </p>
+            </Card>
+          )}
 
           <Card className="p-8 animate-slide-up">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Job Title */}
-              <div>
-                <Label htmlFor="title" className="text-foreground">
-                  Job Title <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="title"
-                  value={jobData.title}
-                  onChange={(e) => setJobData({ ...jobData, title: e.target.value })}
-                  placeholder="e.g., Need AI Automation Expert for Workflow Setup"
-                  className="mt-2"
-                  required
-                  disabled={posting}
-                />
-              </div>
-
-              {/* Category */}
-              <div>
-                <Label htmlFor="category" className="text-foreground">
-                  Category <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={jobData.category}
-                  onValueChange={(value) => setJobData({ ...jobData, category: value })}
-                  disabled={posting}
-                >
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ai-automation">AI & Automation</SelectItem>
-                    <SelectItem value="web-development">Web Development</SelectItem>
-                    <SelectItem value="mobile-development">Mobile Development</SelectItem>
-                    <SelectItem value="data-analysis">Data Analysis</SelectItem>
-                    <SelectItem value="workflow-design">Workflow Design</SelectItem>
-                    <SelectItem value="api-integration">API Integration</SelectItem>
-                    <SelectItem value="consulting">Consulting</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Description */}
-              <div>
-                <Label htmlFor="description" className="text-foreground">
-                  Job Description <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="description"
-                  value={jobData.description}
-                  onChange={(e) => setJobData({ ...jobData, description: e.target.value })}
-                  placeholder="Describe your project, what needs to be done, and any specific requirements..."
-                  className="mt-2 min-h-[150px]"
-                  required
-                  disabled={posting}
-                />
-              </div>
-
-              {/* Requirements */}
-              <div>
-                <Label htmlFor="requirements" className="text-foreground">
-                  Requirements
-                </Label>
-                <Textarea
-                  id="requirements"
-                  value={jobData.requirements}
-                  onChange={(e) => setJobData({ ...jobData, requirements: e.target.value })}
-                  placeholder="List specific requirements, qualifications, or deliverables..."
-                  className="mt-2 min-h-[100px]"
-                  disabled={posting}
-                />
-              </div>
-
-              {/* Skills */}
-              <div>
-                <Label htmlFor="skills" className="text-foreground">
-                  Required Skills
-                </Label>
-                <Input
-                  id="skills"
-                  value={jobData.skills}
-                  onChange={(e) => setJobData({ ...jobData, skills: e.target.value })}
-                  placeholder="e.g., Python, API Integration, Workflow Automation"
-                  className="mt-2"
-                  disabled={posting}
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Separate skills with commas
-                </p>
-              </div>
-
-              {/* Budget */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="budgetType" className="text-foreground">
-                    Budget Type <span className="text-destructive">*</span>
-                  </Label>
+                  <Label className="text-foreground">Target Type</Label>
                   <Select
-                    value={jobData.budgetType}
-                    onValueChange={(value) => setJobData({ ...jobData, budgetType: value })}
-                    disabled={posting}
+                    value={targetType}
+                    onValueChange={(value: TargetType) => handleTargetTypeChange(value)}
+                    disabled={!isBusiness || saving}
                   >
                     <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Select budget type" />
+                      <SelectValue placeholder="Select target type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fixed">Fixed Price</SelectItem>
-                      <SelectItem value="hourly">Hourly Rate</SelectItem>
+                      <SelectItem value="freelancer">Freelancer</SelectItem>
+                      <SelectItem value="service_provider">Service Provider</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <Label htmlFor="budget" className="text-foreground">
-                    Budget (USD) <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative mt-2">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="budget"
-                      type="number"
-                      value={jobData.budget}
-                      onChange={(e) => setJobData({ ...jobData, budget: e.target.value })}
-                      placeholder={jobData.budgetType === 'hourly' ? '50/hr' : '1000'}
-                      className="pl-10"
-                      min="0"
-                      step="0.01"
-                      required
-                      disabled={posting}
-                    />
-                  </div>
+                  <Label className="text-foreground">Choose Recipient</Label>
+                  <Select
+                    value={formData.targetId}
+                    onValueChange={(value) => setFormData({ ...formData, targetId: value })}
+                    disabled={!isBusiness || saving || loading || availableTargets.length === 0}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder={loading ? "Loading options..." : "Select a recipient"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableTargets.map((target) => (
+                        <SelectItem key={target._id} value={target._id}>
+                          {targetType === "freelancer"
+                            ? target.freelancerProfile?.name || target.email
+                            : target.serviceProviderProfile?.companyName || target.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {targetType === "freelancer"
+                      ? "Choose a freelancer you discovered in the marketplace."
+                      : "Invite a service provider to collaborate."}
+                  </p>
                 </div>
               </div>
 
-              {/* Duration */}
+              {selectedTarget && (
+                <div className="rounded-lg border border-dashed p-4 bg-muted/30">
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    {targetType === "freelancer"
+                      ? selectedTarget.freelancerProfile?.expertise || "No expertise listed"
+                      : selectedTarget.serviceProviderProfile?.description || "No description provided"}
+                  </div>
+                </div>
+              )}
+
               <div>
-                <Label htmlFor="duration" className="text-foreground">
-                  Project Duration
-                </Label>
-                <Select
-                  value={jobData.duration}
-                  onValueChange={(value) => setJobData({ ...jobData, duration: value })}
-                  disabled={posting}
-                >
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Estimated project duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="less-than-week">Less than 1 week</SelectItem>
-                    <SelectItem value="1-2-weeks">1-2 weeks</SelectItem>
-                    <SelectItem value="2-4-weeks">2-4 weeks</SelectItem>
-                    <SelectItem value="1-3-months">1-3 months</SelectItem>
-                    <SelectItem value="3-6-months">3-6 months</SelectItem>
-                    <SelectItem value="more-than-6-months">More than 6 months</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="title">Project Title <span className="text-destructive">*</span></Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g., Implement workflow automation for onboarding"
+                  className="mt-2"
+                  required
+                  disabled={!isBusiness || saving}
+                />
               </div>
 
-              {/* Experience Level */}
               <div>
-                <Label htmlFor="experienceLevel" className="text-foreground">
-                  Experience Level Required
-                </Label>
-                <Select
-                  value={jobData.experienceLevel}
-                  onValueChange={(value) => setJobData({ ...jobData, experienceLevel: value })}
-                  disabled={posting}
-                >
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Select experience level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="entry">Entry Level</SelectItem>
-                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="expert">Expert</SelectItem>
-                    <SelectItem value="any">Any Level</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="description">Scope & Goals <span className="text-destructive">*</span></Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Describe your project, desired outcomes, timelines, and tools"
+                  className="mt-2 min-h-[150px]"
+                  required
+                  disabled={!isBusiness || saving}
+                />
               </div>
 
-              {/* Submit Buttons */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="budget">Budget (USD) <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="budget"
+                    type="number"
+                    value={formData.initialPrice}
+                    onChange={(e) => setFormData({ ...formData, initialPrice: e.target.value })}
+                    placeholder="5000"
+                    className="mt-2"
+                    min="0"
+                    step="0.01"
+                    required
+                    disabled={!isBusiness || saving}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="currency">Currency</Label>
+                  <Select
+                    value={formData.currency}
+                    onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                    disabled={!isBusiness || saving}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="GBP">GBP</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="terms">Terms / Notes</Label>
+                <Textarea
+                  id="terms"
+                  value={formData.proposedTerms}
+                  onChange={(e) => setFormData({ ...formData, proposedTerms: e.target.value })}
+                  placeholder="Payment schedule, deliverables, milestones, etc."
+                  className="mt-2 min-h-[120px]"
+                  disabled={!isBusiness || saving}
+                />
+              </div>
+
               <div className="flex gap-4 pt-4">
-                <Button type="submit" size="lg" className="flex-1" disabled={posting}>
-                  <Briefcase className="mr-2 h-4 w-4" />
-                  {posting ? 'Posting...' : 'Post Job'}
+                <Button type="submit" size="lg" className="flex-1" disabled={!isBusiness || saving}>
+                  {saving ? "Sending..." : "Send Engagement"}
                 </Button>
                 <Button
                   type="button"
@@ -300,7 +340,7 @@ const PostJob = () => {
                   size="lg"
                   className="flex-1"
                   onClick={() => navigate('/dashboard')}
-                  disabled={posting}
+                  disabled={saving}
                 >
                   Cancel
                 </Button>

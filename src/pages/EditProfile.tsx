@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Building2, Save, Upload } from "lucide-react";
+import { User, Building2, Save, Upload, Rocket } from "lucide-react";
 import ApiService from "@/services/api";
 
 const EditProfile = () => {
@@ -34,7 +34,7 @@ const EditProfile = () => {
       const response = await ApiService.getProfile();
       if (response.success) {
         setUserType(response.user.userType);
-        
+
         if (response.user.userType === 'freelancer') {
           setProfileData({
             name: response.user.freelancerProfile?.name || '',
@@ -46,7 +46,7 @@ const EditProfile = () => {
             hourlyRate: response.user.freelancerProfile?.hourlyRate || '',
             availability: response.user.freelancerProfile?.availability || '',
           });
-        } else {
+        } else if (response.user.userType === 'business') {
           setProfileData({
             businessName: response.user.businessProfile?.businessName || '',
             email: response.user.email || '',
@@ -56,6 +56,15 @@ const EditProfile = () => {
             requiredSkills: response.user.businessProfile?.requiredSkills || '',
             website: response.user.businessProfile?.website || '',
             description: response.user.businessProfile?.description || '',
+          });
+        } else {
+          setProfileData({
+            companyName: response.user.serviceProviderProfile?.companyName || '',
+            email: response.user.email || '',
+            websiteUrl: response.user.serviceProviderProfile?.websiteUrl || '',
+            industryFocus: response.user.serviceProviderProfile?.industryFocus?.join(', ') || '',
+            integrations: response.user.serviceProviderProfile?.integrations?.join(', ') || '',
+            description: response.user.serviceProviderProfile?.description || '',
           });
         }
       }
@@ -77,8 +86,20 @@ const EditProfile = () => {
     try {
       if (userType === 'freelancer') {
         await ApiService.createFreelancerProfile(profileData);
-      } else {
+      } else if (userType === 'business') {
         await ApiService.createBusinessProfile(profileData);
+      } else {
+        await ApiService.createServiceProviderProfile({
+          companyName: profileData.companyName,
+          websiteUrl: profileData.websiteUrl,
+          industryFocus: profileData.industryFocus
+            ? profileData.industryFocus.split(',').map((item: string) => item.trim()).filter(Boolean)
+            : [],
+          integrations: profileData.integrations
+            ? profileData.integrations.split(',').map((item: string) => item.trim()).filter(Boolean)
+            : [],
+          description: profileData.description,
+        });
       }
 
       toast({
@@ -101,7 +122,6 @@ const EditProfile = () => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // TODO: Implement actual image upload
       toast({
         title: "Feature Coming Soon",
         description: "Profile picture upload will be available soon",
@@ -123,6 +143,12 @@ const EditProfile = () => {
     );
   }
 
+  const profileLabel = userType === 'freelancer'
+    ? 'freelancer'
+    : userType === 'business'
+      ? 'business'
+      : 'service provider';
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -133,29 +159,30 @@ const EditProfile = () => {
             <div className="flex items-center gap-3 mb-4">
               {userType === 'freelancer' ? (
                 <User className="h-10 w-10 text-primary" />
-              ) : (
+              ) : userType === 'business' ? (
                 <Building2 className="h-10 w-10 text-primary" />
+              ) : (
+                <Rocket className="h-10 w-10 text-primary" />
               )}
-              <h1 className="text-4xl font-bold text-foreground">
-                Edit Profile
-              </h1>
+              <h1 className="text-4xl font-bold text-foreground">Edit Profile</h1>
             </div>
             <p className="text-xl text-muted-foreground">
-              Update your {userType === 'freelancer' ? 'freelancer' : 'business'} information
+              Update your {profileLabel} information
             </p>
           </div>
 
           <Card className="p-8 animate-slide-up">
             <form onSubmit={handleSave} className="space-y-6">
-              {/* Profile Picture Upload */}
               <div>
                 <Label className="text-foreground">Profile Picture</Label>
                 <div className="mt-2 flex items-center gap-4">
                   <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
                     {userType === 'freelancer' ? (
                       <User className="h-10 w-10 text-primary" />
-                    ) : (
+                    ) : userType === 'business' ? (
                       <Building2 className="h-10 w-10 text-primary" />
+                    ) : (
+                      <Rocket className="h-10 w-10 text-primary" />
                     )}
                   </div>
                   <div>
@@ -178,8 +205,7 @@ const EditProfile = () => {
                 </div>
               </div>
 
-              {userType === 'freelancer' ? (
-                // Freelancer Fields
+              {userType === 'freelancer' && (
                 <>
                   <div>
                     <Label htmlFor="name" className="text-foreground">
@@ -207,9 +233,7 @@ const EditProfile = () => {
                       disabled
                       className="mt-2 bg-muted"
                     />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Email cannot be changed
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">Email cannot be changed</p>
                   </div>
 
                   <div>
@@ -250,6 +274,34 @@ const EditProfile = () => {
                   </div>
 
                   <div>
+                    <Label htmlFor="pastProjects" className="text-foreground">
+                      Past Projects
+                    </Label>
+                    <Textarea
+                      id="pastProjects"
+                      value={profileData.pastProjects}
+                      onChange={(e) => setProfileData({ ...profileData, pastProjects: e.target.value })}
+                      placeholder="Describe notable projects and achievements"
+                      className="mt-2"
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="portfolioLinks" className="text-foreground">
+                      Portfolio Links
+                    </Label>
+                    <Input
+                      id="portfolioLinks"
+                      value={profileData.portfolioLinks}
+                      onChange={(e) => setProfileData({ ...profileData, portfolioLinks: e.target.value })}
+                      placeholder="https://portfolio.com, https://github.com/username"
+                      className="mt-2"
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div>
                     <Label htmlFor="hourlyRate" className="text-foreground">
                       Hourly Rate (USD)
                     </Label>
@@ -276,48 +328,21 @@ const EditProfile = () => {
                       disabled={saving}
                     >
                       <SelectTrigger className="mt-2">
-                        <SelectValue placeholder="Select your availability" />
+                        <SelectValue placeholder="Select availability" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="full-time">Full-time (40+ hrs/week)</SelectItem>
-                        <SelectItem value="part-time">Part-time (20-40 hrs/week)</SelectItem>
-                        <SelectItem value="contract">Contract basis</SelectItem>
-                        <SelectItem value="hourly">Hourly projects</SelectItem>
-                        <SelectItem value="not-available">Not currently available</SelectItem>
+                        <SelectItem value="full-time">Full-time</SelectItem>
+                        <SelectItem value="part-time">Part-time</SelectItem>
+                        <SelectItem value="contract">Contract</SelectItem>
+                        <SelectItem value="hourly">Hourly</SelectItem>
+                        <SelectItem value="not-available">Not available</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
-                  <div>
-                    <Label htmlFor="pastProjects" className="text-foreground">
-                      Past Projects
-                    </Label>
-                    <Textarea
-                      id="pastProjects"
-                      value={profileData.pastProjects}
-                      onChange={(e) => setProfileData({ ...profileData, pastProjects: e.target.value })}
-                      placeholder="Describe your notable past projects..."
-                      className="mt-2 min-h-[120px]"
-                      disabled={saving}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="portfolioLinks" className="text-foreground">
-                      Portfolio Links
-                    </Label>
-                    <Input
-                      id="portfolioLinks"
-                      value={profileData.portfolioLinks}
-                      onChange={(e) => setProfileData({ ...profileData, portfolioLinks: e.target.value })}
-                      placeholder="https://portfolio.com, https://github.com/username"
-                      className="mt-2"
-                      disabled={saving}
-                    />
-                  </div>
                 </>
-              ) : (
-                // Business Fields
+              )}
+
+              {userType === 'business' && (
                 <>
                   <div>
                     <Label htmlFor="businessName" className="text-foreground">
@@ -345,9 +370,7 @@ const EditProfile = () => {
                       disabled
                       className="mt-2 bg-muted"
                     />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Email cannot be changed
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">Email cannot be changed</p>
                   </div>
 
                   <div>
@@ -451,6 +474,99 @@ const EditProfile = () => {
                       onChange={(e) => setProfileData({ ...profileData, description: e.target.value })}
                       placeholder="Tell us about your company..."
                       className="mt-2 min-h-[120px]"
+                      disabled={saving}
+                    />
+                  </div>
+                </>
+              )}
+
+              {userType === 'service_provider' && (
+                <>
+                  <div>
+                    <Label htmlFor="companyName" className="text-foreground">
+                      Company Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="companyName"
+                      value={profileData.companyName}
+                      onChange={(e) => setProfileData({ ...profileData, companyName: e.target.value })}
+                      placeholder="Enter your company name"
+                      className="mt-2"
+                      required
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="email" className="text-foreground">
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={profileData.email}
+                      disabled
+                      className="mt-2 bg-muted"
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">Email cannot be changed</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="websiteUrl" className="text-foreground">
+                      Website
+                    </Label>
+                    <Input
+                      id="websiteUrl"
+                      type="url"
+                      value={profileData.websiteUrl}
+                      onChange={(e) => setProfileData({ ...profileData, websiteUrl: e.target.value })}
+                      placeholder="https://example.com"
+                      className="mt-2"
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="industryFocus" className="text-foreground">
+                      Industry Focus
+                    </Label>
+                    <Input
+                      id="industryFocus"
+                      value={profileData.industryFocus}
+                      onChange={(e) => setProfileData({ ...profileData, industryFocus: e.target.value })}
+                      placeholder="Retail, Logistics, Hospitality"
+                      className="mt-2"
+                      disabled={saving}
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">Separate industries with commas</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="integrations" className="text-foreground">
+                      Integrations
+                    </Label>
+                    <Input
+                      id="integrations"
+                      value={profileData.integrations}
+                      onChange={(e) => setProfileData({ ...profileData, integrations: e.target.value })}
+                      placeholder="Salesforce, HubSpot, Zapier"
+                      className="mt-2"
+                      disabled={saving}
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">Separate integrations with commas</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description" className="text-foreground">
+                      Description <span className="text-destructive">*</span>
+                    </Label>
+                    <Textarea
+                      id="description"
+                      value={profileData.description}
+                      onChange={(e) => setProfileData({ ...profileData, description: e.target.value })}
+                      placeholder="Describe your offerings and differentiators"
+                      className="mt-2 min-h-[120px]"
+                      required
                       disabled={saving}
                     />
                   </div>

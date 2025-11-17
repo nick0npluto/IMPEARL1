@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Navbar from "@/components/Navbar";
-import { Building2, User } from "lucide-react";
+import { Building2, User, Globe } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import ApiService from "@/services/api";
@@ -14,14 +14,14 @@ const Register = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'choose' | 'credentials'>('choose');
-  const [selectedRole, setSelectedRole] = useState<"business" | "freelancer" | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"business" | "freelancer" | "service_provider" | null>(null);
   const [credentials, setCredentials] = useState({
     email: "",
     password: "",
     confirmPassword: ""
   });
 
-  const handleRoleSelection = (role: 'business' | 'freelancer') => {
+  const handleRoleSelection = (role: 'business' | 'freelancer' | 'service_provider') => {
     setSelectedRole(role);
     setStep('credentials');
   };
@@ -62,7 +62,7 @@ const Register = () => {
       await ApiService.register(
         credentials.email,
         credentials.password,
-        selectedRole as 'business' | 'freelancer'
+        selectedRole as 'business' | 'freelancer' | 'service_provider'
       );
 
       toast({
@@ -73,8 +73,10 @@ const Register = () => {
       // Redirect to profile creation
       if (selectedRole === 'freelancer') {
         navigate('/register/freelancer');
-      } else {
+      } else if (selectedRole === 'business') {
         navigate('/register/business');
+      } else {
+        navigate('/register/service-provider');
       }
     } catch (error: any) {
       toast({
@@ -99,7 +101,11 @@ const Register = () => {
                 Create Your Account
               </h1>
               <p className="text-xl text-muted-foreground">
-                {selectedRole === 'freelancer' ? 'Freelancer' : 'Business'} Account
+                {selectedRole === 'freelancer'
+                  ? 'Freelancer'
+                  : selectedRole === 'business'
+                    ? 'Business'
+                    : 'Service Provider'} Account
               </p>
             </div>
 
@@ -198,7 +204,7 @@ const Register = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-slide-up">
             <Card 
               className="p-8 hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary"
               onClick={() => handleRoleSelection("business")}
@@ -231,6 +237,24 @@ const Register = () => {
                 </p>
                 <Button variant="default" size="lg" className="w-full">
                   Continue as Freelancer
+                </Button>
+              </div>
+            </Card>
+
+            <Card 
+              className="p-8 hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary"
+              onClick={() => handleRoleSelection("service_provider")}
+            >
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                  <Globe className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2 text-foreground">Service Provider</h3>
+                <p className="text-muted-foreground mb-6">
+                  Publish SaaS tools or packaged services and get matched with IMPEARL businesses ready to buy
+                </p>
+                <Button variant="default" size="lg" className="w-full">
+                  Continue as Provider
                 </Button>
               </div>
             </Card>

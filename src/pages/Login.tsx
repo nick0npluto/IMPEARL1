@@ -47,8 +47,10 @@ const Login = () => {
         // Redirect to profile creation
         if (response.user.userType === 'freelancer') {
           navigate('/register/freelancer');
-        } else {
+        } else if (response.user.userType === 'business') {
           navigate('/register/business');
+        } else {
+          navigate('/register/service-provider');
         }
       }
     } catch (error: any) {

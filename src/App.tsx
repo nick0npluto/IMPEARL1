@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Features from "./pages/Features";
 import Dashboard from "./pages/Dashboard";
@@ -12,70 +13,74 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import BusinessProfile from "./pages/BusinessProfile";
 import FreelancerProfile from "./pages/FreelancerProfile";
+import ServiceProviderProfile from "./pages/ServiceProviderProfile";
 import Marketplace from "./pages/Marketplace";
 import FreelancerDetail from "./pages/FreelancerDetail";
 import CompareFreelancers from "./pages/CompareFreelancers";
 import EditProfile from "./pages/EditProfile";
 import PostJob from "./pages/PostJob";
 import BrowseJobs from "./pages/BrowseJobs";
+import Engagements from "./pages/Engagements";
+import Notifications from "./pages/Notifications";
+import BusinessIntake from "./pages/BusinessIntake";
 import CostCalculator from "./pages/CostCalculator";
 import BookmarkedFreelancers from "./pages/BookmarkedFreelancers";
-import Messages from "./pages/Messages";
-import Analytics from "./pages/Analytics";
-import PayCenter from "./pages/PayCenter";
-import MyProposals from "./pages/MyProposals";
-import ActiveProjects from "./pages/ActiveProjects";
-import Earnings from "./pages/Earnings";
-import ReviewsRatings from "./pages/ReviewsRatings";
+import AuthGate from "@/components/AuthGate";
+import GuestGate from "@/components/GuestGate";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
+      <AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
           <Route path="/features" element={<Features />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+            <Route
+              path="/dashboard"
+              element={
+                <AuthGate>
+                  <Dashboard />
+                </AuthGate>
+              }
+            />
           <Route path="/support" element={<Support />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register/business" element={<BusinessProfile />} />
-          <Route path="/register/freelancer" element={<FreelancerProfile />} />
-          
+            <Route
+              path="/register"
+              element={<GuestGate><Register /></GuestGate>}
+            />
+            <Route
+              path="/login"
+              element={<GuestGate><Login /></GuestGate>}
+            />
+          <Route path="/register/business" element={<GuestGate><BusinessProfile /></GuestGate>} />
+          <Route path="/register/freelancer" element={<GuestGate><FreelancerProfile /></GuestGate>} />
+          <Route path="/register/service-provider" element={<GuestGate><ServiceProviderProfile /></GuestGate>} />
           {/* Marketplace Routes */}
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/freelancer/:id" element={<FreelancerDetail />} />
-          <Route path="/compare" element={<CompareFreelancers />} />
+          <Route path="/marketplace" element={<AuthGate><Marketplace /></AuthGate>} />
+          <Route path="/freelancer/:id" element={<AuthGate><FreelancerDetail /></AuthGate>} />
+          <Route path="/compare" element={<AuthGate><CompareFreelancers /></AuthGate>} />
+          <Route path="/bookmarks" element={<AuthGate><BookmarkedFreelancers /></AuthGate>} />
           <Route path="/bookmarks" element={<BookmarkedFreelancers />} />
           
           {/* Dashboard Feature Routes */}
-          <Route path="/profile" element={<EditProfile />} />
-          <Route path="/post-job" element={<PostJob />} />
-          <Route path="/jobs" element={<BrowseJobs />} />
-          <Route path="/calculator" element={<CostCalculator />} />
-          
-          {/* New Features */}
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/pay-center" element={<PayCenter />} />
-          
-          {/* Freelancer Features - Support both URL patterns */}
-          <Route path="/proposals" element={<MyProposals />} />
-          <Route path="/my-proposals" element={<MyProposals />} />
-          <Route path="/projects" element={<ActiveProjects />} />
-          <Route path="/active-projects" element={<ActiveProjects />} />
-          <Route path="/earnings" element={<Earnings />} />
-          <Route path="/reviews" element={<ReviewsRatings />} />
-          <Route path="/reviews-ratings" element={<ReviewsRatings />} />
+          <Route path="/profile" element={<AuthGate><EditProfile /></AuthGate>} />
+          <Route path="/post-job" element={<AuthGate><PostJob /></AuthGate>} />
+          <Route path="/jobs" element={<AuthGate><BrowseJobs /></AuthGate>} />
+          <Route path="/engagements" element={<AuthGate><Engagements /></AuthGate>} />
+          <Route path="/notifications" element={<AuthGate><Notifications /></AuthGate>} />
+          <Route path="/qna" element={<AuthGate><BusinessIntake /></AuthGate>} />
+          <Route path="/calculator" element={<AuthGate><CostCalculator /></AuthGate>} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

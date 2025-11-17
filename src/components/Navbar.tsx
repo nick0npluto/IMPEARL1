@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 import logo from "@/assets/logo.png";
+import { useAuth } from "@/hooks/useAuth";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/40 backdrop-blur-xl border-b border-border/50 shadow-lg">
@@ -22,15 +24,28 @@ const Navbar = () => {
             <Link to="/features" className="text-foreground hover:text-primary transition-colors">
               Features
             </Link>
-            <Link to="/dashboard" className="text-foreground hover:text-primary transition-colors">
-              Dashboard
-            </Link>
+            {user && (
+              <>
+                <Link to="/dashboard" className="text-foreground hover:text-primary transition-colors">
+                  Dashboard
+                </Link>
+                <Link to="/notifications" className="text-foreground hover:text-primary transition-colors">
+                  Notifications
+                </Link>
+              </>
+            )}
             <Link to="/support" className="text-foreground hover:text-primary transition-colors">
               Support
             </Link>
-            <Button variant="default" size="sm" asChild>
-              <Link to="/register">Get Started</Link>
-            </Button>
+            {user ? (
+              <Button variant="outline" size="sm" onClick={logout}>
+                Log Out
+              </Button>
+            ) : (
+              <Button variant="default" size="sm" asChild>
+                <Link to="/register">Get Started</Link>
+              </Button>
+            )}
           </div>
 
           <button
@@ -57,13 +72,24 @@ const Navbar = () => {
             >
               Features
             </Link>
-            <Link
-              to="/dashboard"
-              className="block text-foreground hover:text-primary transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Dashboard
-            </Link>
+            {user && (
+              <>
+                <Link
+                  to="/dashboard"
+                  className="block text-foreground hover:text-primary transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to="/notifications"
+                  className="block text-foreground hover:text-primary transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Notifications
+                </Link>
+              </>
+            )}
             <Link
               to="/support"
               className="block text-foreground hover:text-primary transition-colors"
@@ -71,9 +97,15 @@ const Navbar = () => {
             >
               Support
             </Link>
-            <Button variant="default" size="sm" className="w-full" asChild>
-              <Link to="/register" onClick={() => setMobileMenuOpen(false)}>Get Started</Link>
-            </Button>
+            {user ? (
+              <Button variant="outline" size="sm" className="w-full" onClick={() => { logout(); setMobileMenuOpen(false); }}>
+                Log Out
+              </Button>
+            ) : (
+              <Button variant="default" size="sm" className="w-full" asChild>
+                <Link to="/register" onClick={() => setMobileMenuOpen(false)}>Get Started</Link>
+              </Button>
+            )}
           </div>
         )}
       </div>

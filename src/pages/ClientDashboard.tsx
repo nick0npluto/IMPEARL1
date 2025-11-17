@@ -27,7 +27,7 @@ const ClientDashboard = () => {
       icon: Brain,
       title: "AI Recommendations",
       description: "Get personalized automation and tool suggestions",
-      link: "/recommendations",
+      link: "/qna",
     },
     {
       icon: ShoppingCart,
@@ -37,8 +37,8 @@ const ClientDashboard = () => {
     },
     {
       icon: PlusCircle,
-      title: "Post a Job",
-      description: "Create and publish new job opportunities",
+      title: "Send Engagement",
+      description: "Invite freelancers or providers with one click",
       link: "/post-job",
     },
     {

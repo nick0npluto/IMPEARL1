@@ -2,72 +2,72 @@ import Navbar from "@/components/Navbar";
 import DashboardCard from "@/components/DashboardCard";
 import ChatInterface from "@/components/ChatInterface";
 import {
-  User,
+  Building2,
+  Rocket,
+  Store,
   Briefcase,
-  FileText,
-  FolderOpen,
-  DollarSign,
-  Star,
   MessageSquare,
-  TrendingUp,
+  Users,
+  ClipboardList,
+  DollarSign,
   HelpCircle,
 } from "lucide-react";
 
-const FreelancerDashboard = () => {
+const ServiceProviderDashboard = () => {
   const dashboardItems = [
     {
-      icon: User,
-      title: "My Profile",
-      description: "Manage your freelancer profile and portfolio",
+      icon: Building2,
+      title: "Company Profile",
+      description: "Update your service provider profile",
       link: "/profile",
     },
     {
-      icon: Briefcase,
-      title: "Engagements",
-      description: "Review requests and negotiate terms",
+      icon: Rocket,
+      title: "Publish Offering",
+      description: "List SaaS tools or service packages in the marketplace",
+      link: "/marketplace",
+    },
+    {
+      icon: ClipboardList,
+      title: "Engagement Requests",
+      description: "Review new proposals from businesses",
       link: "/engagements",
     },
     {
-      icon: FileText,
-      title: "My Proposals",
-      description: "Track your submitted proposals",
-      link: "/proposals",
-    },
-    {
-      icon: FolderOpen,
-      title: "Active Projects",
-      description: "View and manage your current projects",
-      link: "/projects",
+      icon: Briefcase,
+      title: "Active Contracts",
+      description: "Manage ongoing engagements and deliverables",
+      link: "/contracts",
     },
     {
       icon: DollarSign,
-      title: "Earnings",
-      description: "View your payment history and earnings",
-      link: "/earnings",
+      title: "Payments",
+      description: "Track payments and payouts",
+      link: "/payments",
     },
     {
-      icon: Star,
-      title: "Reviews & Ratings",
-      description: "See your client reviews and ratings",
+      icon: Users,
+      title: "Customer Reviews",
+      description: "See ratings and feedback from businesses",
       link: "/reviews",
+    },
+    {
+      icon: Store,
+      title: "Marketplace Listing",
+      description: "Preview how buyers see your offerings",
+      link: "/marketplace",
     },
     {
       icon: MessageSquare,
       title: "Messages",
-      description: "Chat with clients and get updates",
+      description: "Chat with clients on active contracts",
       link: "/messages",
     },
     {
       icon: HelpCircle,
       title: "Support",
-      description: "Get help and access resources",
+      description: "Reach out to IMPEARL support",
       link: "/support",
-    },
-    {
-      icon: TrendingUp,
-      title: "Analytics",
-      description: "Track your performance and growth",
-      link: "/analytics",
     },
   ];
 
@@ -79,10 +79,10 @@ const FreelancerDashboard = () => {
         <div className="container mx-auto">
           <div className="mb-12 animate-fade-in">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
-              Freelancer Dashboard
+              Service Provider Dashboard
             </h1>
             <p className="text-xl text-muted-foreground">
-              Manage your projects, find new opportunities, and grow your freelance business
+              Manage your offerings, respond to opportunities, and grow with IMPEARL businesses
             </p>
           </div>
 
@@ -110,4 +110,4 @@ const FreelancerDashboard = () => {
   );
 };
 
-export default FreelancerDashboard;
+export default ServiceProviderDashboard;

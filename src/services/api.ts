@@ -66,7 +66,7 @@ class ApiService {
   }
 
   // Auth endpoints
-  async register(email: string, password: string, userType: 'freelancer' | 'business') {
+  async register(email: string, password: string, userType: 'freelancer' | 'business' | 'service_provider') {
     const data = await this.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, userType }),
@@ -132,6 +132,13 @@ class ApiService {
     });
   }
 
+  async createServiceProviderProfile(profileData: any) {
+    return await this.request('/profile/service-provider', {
+      method: 'POST',
+      body: JSON.stringify(profileData),
+    });
+  }
+
   async getFreelancers() {
     return await this.request('/profile/freelancers');
   }
@@ -140,68 +147,107 @@ class ApiService {
     return await this.request(`/profile/freelancer/${id}`);
   }
 
-  // ========== PROPOSALS ENDPOINTS ==========
-  async getFreelancerProposals() {
-    return await this.request('/proposals/freelancer');
+  async getServiceProviders() {
+    return await this.request('/profile/service-providers');
   }
 
-  async getProposalStats() {
-    return await this.request('/proposals/stats/summary');
+  async getServiceProvider(id: string) {
+    return await this.request(`/profile/service-provider/${id}`);
   }
 
-  async createProposal(proposalData: any) {
-    return await this.request('/proposals', {
+  // Engagements & contracts
+  async createEngagement(payload: any) {
+    return await this.request('/engagements', {
       method: 'POST',
-      body: JSON.stringify(proposalData),
+      body: JSON.stringify(payload),
     });
   }
 
-  async withdrawProposal(proposalId: string) {
-    return await this.request(`/proposals/${proposalId}/withdraw`, {
-      method: 'PUT',
+  async getEngagements() {
+    return await this.request('/engagements/my');
+  }
+
+  async acceptEngagement(id: string) {
+    return await this.request(`/engagements/${id}/accept`, {
+      method: 'POST',
     });
   }
 
-  // ========== CONTRACTS ENDPOINTS ==========
+  async declineEngagement(id: string) {
+    return await this.request(`/engagements/${id}/decline`, {
+      method: 'POST',
+    });
+  }
+
+  async counterEngagement(id: string, payload: { price: number; terms: string }) {
+    return await this.request(`/engagements/${id}/counter`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
   async getContracts() {
-    return await this.request('/contracts');
+    return await this.request('/contracts/my');
   }
 
-  async acceptContract(contractId: string) {
-    return await this.request(`/contracts/${contractId}/accept`, {
-      method: 'PUT',
+  async completeContract(id: string) {
+    return await this.request(`/contracts/${id}/complete`, {
+      method: 'POST',
     });
   }
 
-  async completeContract(contractId: string) {
-    return await this.request(`/contracts/${contractId}/complete`, {
-      method: 'PUT',
+  async createPayment(payload: { contractId: string; amount: number }) {
+    return await this.request('/payments', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   }
 
-  async updateContractStatus(contractId: string, status: string) {
-    return await this.request(`/contracts/${contractId}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ status }),
+  async getNotifications() {
+    return await this.request('/notifications/my');
+  }
+
+  async markNotificationRead(id: string) {
+    return await this.request(`/notifications/${id}/read`, {
+      method: 'PATCH',
     });
   }
 
-  // ========== PAYMENTS/EARNINGS ENDPOINTS ==========
-  async getPayments() {
-    return await this.request('/payments');
+  async getMessages(contractId: string) {
+    const params = new URLSearchParams({ contractId });
+    return await this.request(`/messages?${params.toString()}`);
   }
 
-  async getPaymentStats() {
-    return await this.request('/payments/stats/summary');
+  async sendMessage(payload: { contractId: string; body: string; receiverId: string }) {
+    return await this.request('/messages', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   }
 
-  // ========== REVIEWS ENDPOINTS ==========
-  async getReviews() {
-    return await this.request('/reviews');
+  async startQnaSession(answers: Record<string, any>) {
+    return await this.request('/qna/start', {
+      method: 'POST',
+      body: JSON.stringify({ answers }),
+    });
   }
 
-  async getFreelancerReviews(freelancerId: string) {
-    return await this.request(`/reviews/freelancer/${freelancerId}`);
+  async updateQnaSession(sessionId: string, payload: { answers?: Record<string, any>; derivedTags?: string[] }) {
+    return await this.request(`/qna/${sessionId}/answers`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async sendSupportMessage(messages: Array<{ role: string; content: string }>) {
+    return await this.request('/support/chat', {
+      method: 'POST',
+      body: JSON.stringify({ messages }),
+    });
+  }
+
+  async getLatestQnaSession() {
+    return await this.request('/qna/latest');
   }
 
   // Favorites/Bookmarks methods (currently using localStorage)
