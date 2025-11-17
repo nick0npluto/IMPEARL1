@@ -46,6 +46,15 @@ interface Freelancer {
   };
 }
 
+interface ReviewItem {
+  _id: string;
+  reviewerName?: string;
+  reviewerType: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
+
 const FreelancerDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -55,6 +64,8 @@ const FreelancerDetail = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [requestMessage, setRequestMessage] = useState("");
   const [sendingRequest, setSendingRequest] = useState(false);
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -63,11 +74,33 @@ const FreelancerDetail = () => {
     }
   }, [id]);
 
+  const loadReviews = async (freelancerId: string) => {
+    try {
+      setReviewsLoading(true);
+      const response = await ApiService.getReviews("freelancer", freelancerId);
+      setReviews(response.reviews || []);
+    } catch (error: any) {
+      toast({
+        title: "Unable to load reviews",
+        description: error.message || "Please try again shortly.",
+        variant: "destructive",
+      });
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
   const fetchFreelancer = async () => {
     try {
       const response = await ApiService.getFreelancer(id!);
       if (response.success) {
         setFreelancer(response.freelancer);
+        if (response.freelancer?._id) {
+          await loadReviews(response.freelancer._id);
+        } else {
+          setReviews([]);
+          setReviewsLoading(false);
+        }
       }
     } catch (error: any) {
       toast({
@@ -76,6 +109,8 @@ const FreelancerDetail = () => {
         variant: "destructive",
       });
       navigate("/marketplace");
+      setReviews([]);
+      setReviewsLoading(false);
     } finally {
       setLoading(false);
     }
@@ -376,6 +411,43 @@ const FreelancerDetail = () => {
               </div>
             </Card>
           )}
+
+          <Card className="p-6 animate-slide-up">
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+              Reviews & Feedback
+            </h3>
+            {reviewsLoading ? (
+              <p className="text-muted-foreground">Loading reviews...</p>
+            ) : reviews.length === 0 ? (
+              <p className="text-muted-foreground">No reviews yet. Be the first to work with this talent.</p>
+            ) : (
+              <div className="space-y-4">
+                {reviews.map((review) => (
+                  <div key={review._id} className="border-b border-border pb-4 last:border-b-0 last:pb-0">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{review.reviewerName || "Client"}</p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          {review.reviewerType.replace("_", " ")}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span className="font-semibold">{review.rating.toFixed(1)}</span>
+                      </div>
+                    </div>
+                    {review.comment && (
+                      <p className="text-sm text-muted-foreground mt-2 whitespace-pre-line">{review.comment}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
       </section>
     </div>

@@ -84,25 +84,36 @@ router.post('/freelancer', auth, async (req, res) => {
       availability: availability || 'not-available',
       bio: pastProjects || '',
       rating: user.freelancerProfile?.rating || 0,
-      reviewCount: user.freelancerProfile?.reviewCount || 0
+      reviewCount: user.freelancerProfile?.reviewCount || 0,
+      stripeAccountId: user.freelancerProfile?.stripeAccountId || null,
+      stripeStatus: user.freelancerProfile?.stripeStatus || 'pending',
+      payoutsEnabled: user.freelancerProfile?.payoutsEnabled || false
     };
 
     await user.save();
 
+    const freelancerProfileDoc = {
+      user: user._id,
+      user_id: user._id,
+      headline: name,
+      skills: parsedSkills,
+      yearsExperience,
+      hourlyRate: hourlyRate ? parseFloat(hourlyRate) : undefined,
+      availability: availability || 'not-available',
+      industries: [],
+      portfolioUrl: portfolioLinks || '',
+      bio: pastProjects || '',
+      stripeAccountId: user.freelancerProfile?.stripeAccountId || null,
+      stripeStatus: user.freelancerProfile?.stripeStatus || 'pending',
+      payoutsEnabled: user.freelancerProfile?.payoutsEnabled || false,
+      ratingAvg: user.freelancerProfile?.rating || 0,
+      ratingCount: user.freelancerProfile?.reviewCount || 0,
+    };
+
     await FreelancerProfileModel.findOneAndUpdate(
-      { user: user._id },
-      {
-        user: user._id,
-        headline: name,
-        skills: parsedSkills,
-        yearsExperience,
-        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : undefined,
-        availability: availability || 'not-available',
-        industries: [],
-        portfolioUrl: portfolioLinks || '',
-        bio: pastProjects || '',
-      },
-      { upsert: true, new: true }
+      { $or: [{ user: user._id }, { user_id: user._id }] },
+      freelancerProfileDoc,
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
     res.json({
@@ -158,31 +169,46 @@ router.post('/business', auth, async (req, res) => {
     }
 
     // Update business profile
-    user.businessProfile = {
+    const userBusinessProfile = {
       businessName,
       industry,
-      companySize: companySize || '',
       goals,
       requiredSkills: requiredSkills || '',
       website: website || '',
-      description: description || ''
+      description: description || '',
+      rating: user.businessProfile?.rating || 0,
+      reviewCount: user.businessProfile?.reviewCount || 0
     };
+
+    if (companySize) {
+      userBusinessProfile.companySize = companySize;
+    }
+
+    user.businessProfile = userBusinessProfile;
 
     await user.save();
 
+    const businessProfileDoc = {
+      user: user._id,
+      businessName,
+      industry,
+      goals,
+      websiteUrl: website || '',
+      description: description || '',
+      ratingAvg: user.businessProfile?.rating || 0,
+      ratingCount: user.businessProfile?.reviewCount || 0
+    };
+
+    if (companySize) {
+      businessProfileDoc.companySize = companySize;
+    }
+
+    businessProfileDoc.user_id = user._id;
+
     await BusinessProfileModel.findOneAndUpdate(
-      { user: user._id },
-      {
-        user: user._id,
-        businessName,
-        industry,
-        companySize: companySize || '',
-        goals,
-        requiredSkills: requiredSkills || '',
-        websiteUrl: website || '',
-        description: description || ''
-      },
-      { upsert: true, new: true }
+      { $or: [{ user: user._id }, { user_id: user._id }] },
+      businessProfileDoc,
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
     res.json({
@@ -248,22 +274,31 @@ router.post('/service-provider', auth, async (req, res) => {
       integrations: parsedIntegrations,
       description,
       rating: user.serviceProviderProfile?.rating || 0,
-      reviewCount: user.serviceProviderProfile?.reviewCount || 0
+      reviewCount: user.serviceProviderProfile?.reviewCount || 0,
+      stripeAccountId: user.serviceProviderProfile?.stripeAccountId || null,
+      stripeStatus: user.serviceProviderProfile?.stripeStatus || 'pending',
+      payoutsEnabled: user.serviceProviderProfile?.payoutsEnabled || false
     };
 
     await user.save();
 
     await ServiceProviderProfileModel.findOneAndUpdate(
-      { user: user._id },
+      { $or: [{ user: user._id }, { user_id: user._id }] },
       {
         user: user._id,
+        user_id: user._id,
         companyName,
         websiteUrl: websiteUrl || '',
         industryFocus: parsedIndustryFocus,
         integrations: parsedIntegrations,
-        description
+        description,
+        stripeAccountId: user.serviceProviderProfile?.stripeAccountId || null,
+        stripeStatus: user.serviceProviderProfile?.stripeStatus || 'pending',
+        payoutsEnabled: user.serviceProviderProfile?.payoutsEnabled || false,
+        ratingAvg: user.serviceProviderProfile?.rating || 0,
+        ratingCount: user.serviceProviderProfile?.reviewCount || 0,
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
     res.json({
@@ -286,7 +321,8 @@ router.get('/freelancers', auth, async (req, res) => {
   try {
     const freelancers = await User.find({ 
       userType: 'freelancer',
-      'freelancerProfile.name': { $exists: true, $ne: '' }
+      'freelancerProfile.name': { $exists: true, $ne: '' },
+      'freelancerProfile.payoutsEnabled': true
     }).select('-password');
 
     res.json({
@@ -337,7 +373,8 @@ router.get('/service-providers', auth, async (req, res) => {
   try {
     const providers = await User.find({
       userType: 'service_provider',
-      'serviceProviderProfile.companyName': { $exists: true, $ne: '' }
+      'serviceProviderProfile.companyName': { $exists: true, $ne: '' },
+      'serviceProviderProfile.payoutsEnabled': true
     }).select('-password');
 
     res.json({

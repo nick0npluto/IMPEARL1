@@ -8,10 +8,12 @@ import { Building2, User, Globe } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import ApiService from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
 
 const Register = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { refresh } = useAuth();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'choose' | 'credentials'>('choose');
   const [selectedRole, setSelectedRole] = useState<"business" | "freelancer" | "service_provider" | null>(null);
@@ -64,6 +66,12 @@ const Register = () => {
         credentials.password,
         selectedRole as 'business' | 'freelancer' | 'service_provider'
       );
+
+      try {
+        await refresh();
+      } catch (err) {
+        console.error("Failed to sync auth state after registration", err);
+      }
 
       toast({
         title: "Account Created",

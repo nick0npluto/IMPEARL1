@@ -33,11 +33,13 @@ class ApiService {
   }
 
   // Make API request
-  async request(endpoint: string, options: RequestInit = {}) {
+  async request(endpoint: string, options: RequestInit = {}, attempt = 0): Promise<any> {
     const token = this.getToken();
     
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
       ...options.headers,
     };
 
@@ -46,16 +48,43 @@ class ApiService {
     }
 
     const config: RequestInit = {
+      cache: 'no-store',
       ...options,
       headers,
     };
 
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-      const data = await response.json();
+      let data: any = null;
+
+      if (response.status !== 204 && response.status !== 304) {
+        const text = await response.text();
+        data = text ? JSON.parse(text) : null;
+      }
+
+      if (response.status === 304 && attempt === 0) {
+        return this.request(
+          endpoint,
+          {
+            ...options,
+            headers: {
+              ...headers,
+              'Cache-Control': 'no-cache',
+              Pragma: 'no-cache',
+              'If-None-Match': '',
+            },
+            cache: 'reload',
+          },
+          attempt + 1
+        );
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        throw new Error(data?.message || 'Something went wrong');
+      }
+
+      if (response.status === 304) {
+        return { success: true, notModified: true };
       }
 
       return data;
@@ -74,7 +103,13 @@ class ApiService {
 
     if (data.token) {
       this.setToken(data.token);
-      this.setUser(data.user);
+      if (data.user) {
+        const storedUser = {
+          ...data.user,
+          hasProfile: data.user.hasProfile ?? false,
+        };
+        this.setUser(storedUser);
+      }
     }
 
     return data;
@@ -155,6 +190,52 @@ class ApiService {
     return await this.request(`/profile/service-provider/${id}`);
   }
 
+  async getMyListings() {
+    return await this.request('/marketplace/my');
+  }
+
+  async createMarketplaceItem(payload: any) {
+    return await this.request('/marketplace', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateMarketplaceItem(id: string, payload: any) {
+    return await this.request(`/marketplace/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteMarketplaceItem(id: string) {
+    return await this.request(`/marketplace/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async submitReview(
+    targetType: 'freelancer' | 'service_provider' | 'business',
+    targetUserId: string,
+    rating: number,
+    comment: string,
+    targetProfileId?: string
+  ) {
+    const payload: Record<string, any> = { targetType, targetUserId, rating, comment };
+    if (targetProfileId) {
+      payload.targetId = targetProfileId;
+    }
+    return await this.request('/reviews', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getReviews(targetType: 'freelancer' | 'service_provider' | 'business', targetUserId: string) {
+    const params = new URLSearchParams({ targetType, targetUserId });
+    return await this.request(`/reviews?${params.toString()}`);
+  }
+
   // Engagements & contracts
   async createEngagement(payload: any) {
     return await this.request('/engagements', {
@@ -190,16 +271,54 @@ class ApiService {
     return await this.request('/contracts/my');
   }
 
+  async getContract(id: string) {
+    return await this.request(`/contracts/${id}`);
+  }
+
   async completeContract(id: string) {
     return await this.request(`/contracts/${id}/complete`, {
       method: 'POST',
     });
   }
 
-  async createPayment(payload: { contractId: string; amount: number }) {
-    return await this.request('/payments', {
+  async createCheckoutSession(contractId: string) {
+    return await this.request('/payments/create-checkout-session', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ contractId }),
+    });
+  }
+
+  async releaseContract(contractId: string) {
+    return await this.request(`/contracts/${contractId}/release`, {
+      method: 'POST',
+    });
+  }
+
+  async requestContractRelease(contractId: string) {
+    return await this.request(`/contracts/${contractId}/request-release`, {
+      method: 'POST',
+    });
+  }
+
+  async disputeContract(contractId: string) {
+    return await this.request(`/contracts/${contractId}/dispute`, {
+      method: 'POST',
+    });
+  }
+
+  async adminRefundContract(contractId: string) {
+    return await this.request(`/admin/contracts/${contractId}/refund`, {
+      method: 'POST',
+    });
+  }
+
+  async getPayoutStatus() {
+    return await this.request('/connect/status');
+  }
+
+  async startPayoutOnboarding() {
+    return await this.request('/connect/onboard', {
+      method: 'POST',
     });
   }
 
@@ -239,15 +358,38 @@ class ApiService {
     });
   }
 
-  async sendSupportMessage(messages: Array<{ role: string; content: string }>) {
+  async sendSupportMessage(messages: Array<{ role: string; content: string }>, context?: Record<string, any>) {
     return await this.request('/support/chat', {
       method: 'POST',
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({ messages, context }),
     });
   }
 
   async getLatestQnaSession() {
     return await this.request('/qna/latest');
+  }
+
+  async getRecommendedFreelancers() {
+    return await this.request('/recommendations/freelancers');
+  }
+
+  async getRecommendedProviders() {
+    return await this.request('/recommendations/providers');
+  }
+
+  async getRecommendedBusinesses() {
+    return await this.request('/recommendations/businesses');
+  }
+
+  async getTopMatches() {
+    return await this.request('/matches/top');
+  }
+
+  async sendCollaborationRequest(businessId: string, note?: string) {
+    return await this.request('/matches/request', {
+      method: 'POST',
+      body: JSON.stringify({ businessId, note }),
+    });
   }
 
   // Favorites/Bookmarks methods (currently using localStorage)

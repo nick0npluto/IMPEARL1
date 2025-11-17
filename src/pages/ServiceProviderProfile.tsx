@@ -9,10 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import ApiService from "@/services/api";
 import { ArrowLeft, Rocket } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const ServiceProviderProfile = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { refresh } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     companyName: "",
@@ -48,6 +50,12 @@ const ServiceProviderProfile = () => {
           : [],
         description: formData.description,
       });
+
+      try {
+        await refresh();
+      } catch (err) {
+        console.error("Failed to sync auth state after provider profile", err);
+      }
 
       toast({
         title: "Profile Created",

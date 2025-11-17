@@ -11,6 +11,14 @@ const AuthGate = ({ children, redirect = "/login" }: Props) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
+  const onboardingRoute = user?.userType === "freelancer"
+    ? "/register/freelancer"
+    : user?.userType === "business"
+      ? "/register/business"
+      : user?.userType === "service_provider"
+        ? "/register/service-provider"
+        : null;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -24,6 +32,10 @@ const AuthGate = ({ children, redirect = "/login" }: Props) => {
 
   if (!user) {
     return <Navigate to={redirect} replace state={{ from: location.pathname }} />;
+  }
+
+  if (user && user.hasProfile === false && onboardingRoute && location.pathname !== onboardingRoute) {
+    return <Navigate to={onboardingRoute} replace />;
   }
 
   return <>{children}</>;

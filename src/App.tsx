@@ -15,6 +15,8 @@ import BusinessProfile from "./pages/BusinessProfile";
 import FreelancerProfile from "./pages/FreelancerProfile";
 import ServiceProviderProfile from "./pages/ServiceProviderProfile";
 import Marketplace from "./pages/Marketplace";
+import MyListings from "./pages/MyListings";
+import Messages from "./pages/Messages";
 import FreelancerDetail from "./pages/FreelancerDetail";
 import CompareFreelancers from "./pages/CompareFreelancers";
 import EditProfile from "./pages/EditProfile";
@@ -25,6 +27,8 @@ import Notifications from "./pages/Notifications";
 import BusinessIntake from "./pages/BusinessIntake";
 import CostCalculator from "./pages/CostCalculator";
 import BookmarkedFreelancers from "./pages/BookmarkedFreelancers";
+import ContractDetails from "./pages/ContractDetails";
+import PayoutSetup from "./pages/PayoutSetup";
 import AuthGate from "@/components/AuthGate";
 import GuestGate from "@/components/GuestGate";
 
@@ -62,6 +66,8 @@ const App = () => (
           <Route path="/register/service-provider" element={<GuestGate><ServiceProviderProfile /></GuestGate>} />
           {/* Marketplace Routes */}
           <Route path="/marketplace" element={<AuthGate><Marketplace /></AuthGate>} />
+          <Route path="/listings" element={<AuthGate><MyListings /></AuthGate>} />
+          <Route path="/messages" element={<AuthGate><Messages /></AuthGate>} />
           <Route path="/freelancer/:id" element={<AuthGate><FreelancerDetail /></AuthGate>} />
           <Route path="/compare" element={<AuthGate><CompareFreelancers /></AuthGate>} />
           <Route path="/bookmarks" element={<AuthGate><BookmarkedFreelancers /></AuthGate>} />
@@ -72,9 +78,11 @@ const App = () => (
           <Route path="/post-job" element={<AuthGate><PostJob /></AuthGate>} />
           <Route path="/jobs" element={<AuthGate><BrowseJobs /></AuthGate>} />
           <Route path="/engagements" element={<AuthGate><Engagements /></AuthGate>} />
+          <Route path="/contracts/:id" element={<AuthGate><ContractDetails /></AuthGate>} />
           <Route path="/notifications" element={<AuthGate><Notifications /></AuthGate>} />
           <Route path="/qna" element={<AuthGate><BusinessIntake /></AuthGate>} />
           <Route path="/calculator" element={<AuthGate><CostCalculator /></AuthGate>} />
+          <Route path="/payout-setup" element={<AuthGate><PayoutSetup /></AuthGate>} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

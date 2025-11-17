@@ -64,11 +64,37 @@ const Marketplace = () => {
   const [availabilityFilter, setAvailabilityFilter] = useState("all");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
+  const [recommendedFreelancers, setRecommendedFreelancers] = useState<any[]>([]);
+  const [recommendedProviders, setRecommendedProviders] = useState<any[]>([]);
+
+  const currentUser = ApiService.getUser();
+  const isBusiness = currentUser?.userType === "business";
 
   useEffect(() => {
     fetchTalent();
     loadFavorites();
   }, []);
+
+  useEffect(() => {
+    if (!isBusiness) return;
+    const loadRecommendations = async () => {
+      try {
+        const [freelancerRec, providerRec] = await Promise.all([
+          ApiService.getRecommendedFreelancers().catch(() => ({ recommendations: [] })),
+          ApiService.getRecommendedProviders().catch(() => ({ recommendations: [] })),
+        ]);
+        setRecommendedFreelancers(freelancerRec?.recommendations || []);
+        setRecommendedProviders(providerRec?.recommendations || []);
+      } catch (error: any) {
+        toast({
+          title: "Recommendations unavailable",
+          description: error.message || "Unable to load AI recommendations right now.",
+        });
+      }
+    };
+
+    loadRecommendations();
+  }, [isBusiness, toast]);
 
   useEffect(() => {
     filterFreelancers();
@@ -295,8 +321,40 @@ const Marketplace = () => {
 
           {isFreelancerView ? (
             <>
-              <div className="mb-8 space-y-4 animate-slide-up">
-                <div className="flex flex-col md:flex-row gap-4">
+          <div className="mb-8 space-y-4 animate-slide-up">
+            {isBusiness && recommendedFreelancers.length > 0 && (
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-foreground">AI-picked freelancers</h2>
+                    <p className="text-sm text-muted-foreground">Based on your intake and active goals.</p>
+                  </div>
+                  <Badge variant="secondary">Beta</Badge>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {recommendedFreelancers.map((rec) => (
+                    <Card key={rec.id} className="p-4 shadow-none border-border">
+                      <p className="font-semibold text-foreground">{rec.name}</p>
+                      <p className="text-sm text-muted-foreground">{rec.expertise || "Automation expert"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Experience: {rec.yearsExperience || "n/a"} | Rate: {rec.hourlyRate ? `$${rec.hourlyRate}/hr` : "Custom"}
+                      </p>
+                      {rec.reason && (
+                        <p className="text-xs text-muted-foreground mt-1">{rec.reason}</p>
+                      )}
+                      <div className="flex gap-2 mt-3">
+                        <Button size="sm" onClick={() => navigate(`/freelancer/${rec.id}`)}>View Profile</Button>
+                        <Button size="sm" variant="outline" onClick={() => navigate("/post-job", { state: { targetType: "freelancer", targetId: rec.id } })}>
+                          Invite
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            <div className="flex flex-col md:flex-row gap-4">
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
@@ -477,6 +535,43 @@ const Marketplace = () => {
           ) : (
             <>
               <div className="mb-8 animate-slide-up">
+                {isBusiness && recommendedProviders.length > 0 && (
+                  <Card className="p-6 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-2xl font-semibold text-foreground">AI-picked service providers</h2>
+                        <p className="text-sm text-muted-foreground">Tailored to your automation roadmap.</p>
+                      </div>
+                      <Badge variant="secondary">Beta</Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {recommendedProviders.map((provider) => (
+                        <Card key={provider.id} className="p-4 shadow-none border-border">
+                          <p className="font-semibold text-foreground">{provider.companyName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {(provider.industryFocus || []).join(', ') || 'Cross-industry'}
+                          </p>
+                          {provider.reason && (
+                            <p className="text-xs text-muted-foreground mt-1">{provider.reason}</p>
+                          )}
+                          <div className="flex gap-2 mt-3">
+                            <Button size="sm" onClick={() => handleRequestEngagement("service_provider", provider.id)}>
+                              Request Engagement
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => navigate("/post-job", { state: { targetType: "service_provider", targetId: provider.id } })}
+                            >
+                              Invite
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
                 <div className="flex flex-col gap-4 md:flex-row">
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />

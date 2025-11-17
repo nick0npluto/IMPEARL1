@@ -7,6 +7,12 @@ const FreelancerProfileSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  user_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    unique: true,
+    sparse: true
+  },
   headline: {
     type: String,
     trim: true
@@ -46,6 +52,19 @@ const FreelancerProfileSchema = new mongoose.Schema({
   ratingCount: {
     type: Number,
     default: 0
+  },
+  stripeAccountId: {
+    type: String,
+    default: null
+  },
+  stripeStatus: {
+    type: String,
+    enum: ['pending', 'enabled', 'disabled'],
+    default: 'pending'
+  },
+  payoutsEnabled: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

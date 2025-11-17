@@ -16,10 +16,12 @@ import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
 import ApiService from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
 
 const BusinessProfile = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { refresh } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     businessName: "",
@@ -48,7 +50,13 @@ const BusinessProfile = () => {
 
     try {
       await ApiService.createBusinessProfile(formData);
-      
+
+      try {
+        await refresh();
+      } catch (err) {
+        console.error("Failed to sync auth state after business profile", err);
+      }
+
       toast({
         title: "Profile Created",
         description: "Your business profile has been saved successfully.",

@@ -7,6 +7,12 @@ const BusinessProfileSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  user_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    unique: true,
+    sparse: true
+  },
   businessName: {
     type: String,
     required: true,
@@ -32,6 +38,16 @@ const BusinessProfileSchema = new mongoose.Schema({
   },
   description: {
     type: String
+  },
+  ratingAvg: {
+    type: Number,
+    min: 0,
+    max: 5,
+    default: 0
+  },
+  ratingCount: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

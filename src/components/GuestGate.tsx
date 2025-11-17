@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -8,6 +8,15 @@ interface Props {
 
 const GuestGate = ({ children }: Props) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
+
+  const onboardingRoute = user?.userType === "freelancer"
+    ? "/register/freelancer"
+    : user?.userType === "business"
+      ? "/register/business"
+      : user?.userType === "service_provider"
+        ? "/register/service-provider"
+        : null;
 
   if (loading) {
     return (
@@ -21,7 +30,13 @@ const GuestGate = ({ children }: Props) => {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    if (user.hasProfile) {
+      return <Navigate to="/dashboard" replace />;
+    }
+
+    if (user.hasProfile === false && onboardingRoute && location.pathname !== onboardingRoute) {
+      return <Navigate to={onboardingRoute} replace />;
+    }
   }
 
   return <>{children}</>;

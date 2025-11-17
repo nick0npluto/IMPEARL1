@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Tabs,
   TabsList,
@@ -19,7 +21,6 @@ import {
   Users,
   CheckCircle,
   RefreshCcw,
-  DollarSign,
   MessageSquare,
   Send,
   ArrowRight,
@@ -40,17 +41,20 @@ interface Engagement {
     terms?: string;
   };
   fromBusiness?: {
+    _id?: string;
     businessName?: string;
     goals?: string;
     description?: string;
     user?: string;
   };
   targetFreelancer?: {
+    _id?: string;
     name?: string;
     expertise?: string;
     user?: string;
   };
   targetProvider?: {
+    _id?: string;
     companyName?: string;
     description?: string;
     user?: string;
@@ -65,6 +69,12 @@ interface Contract {
   status: "active" | "completed";
   agreedPrice: number;
   currency: string;
+  paymentStatus?: "unpaid" | "held" | "released" | "disputed" | "refunded";
+  amountUsd?: number;
+  freelancerRequestedRelease?: boolean;
+  targetType?: "freelancer" | "service_provider";
+  targetFreelancer?: { _id?: string; name?: string };
+  targetProvider?: { _id?: string; companyName?: string };
   engagementRequest?: Engagement;
 }
 
@@ -85,8 +95,17 @@ const statusBadge: Record<string, string> = {
   expired: "bg-slate-100 text-slate-900",
 };
 
+const paymentBadge: Record<string, string> = {
+  unpaid: "bg-slate-100 text-slate-900",
+  held: "bg-amber-100 text-amber-900",
+  released: "bg-emerald-100 text-emerald-900",
+  disputed: "bg-rose-100 text-rose-900",
+  refunded: "bg-slate-200 text-slate-900",
+};
+
 const Engagements = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const user = ApiService.getUser();
   const userType = user?.userType;
   const currentUserId = user?.id;
@@ -98,9 +117,61 @@ const Engagements = () => {
   const [activeContractId, setActiveContractId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [messageLoading, setMessageLoading] = useState(false);
+  const [reviewForms, setReviewForms] = useState<Record<string, { rating: string; comment: string }>>({});
+  const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null);
+  const [reviewedTargets, setReviewedTargets] = useState<Record<string, boolean>>({});
 
   const isBusiness = userType === "business";
   const isTalent = userType === "freelancer" || userType === "service_provider";
+
+  const getReviewTarget = (engagement: Engagement) => {
+    if (isBusiness) {
+      if (engagement.targetType === "freelancer") {
+        return {
+          targetType: "freelancer" as const,
+          targetUserId: engagement.targetFreelancer?.user,
+          targetProfileId: engagement.targetFreelancer?._id,
+          displayName: engagement.targetFreelancer?.name || "Freelancer",
+        };
+      }
+      return {
+        targetType: "service_provider" as const,
+        targetUserId: engagement.targetProvider?.user,
+        targetProfileId: engagement.targetProvider?._id,
+        displayName: engagement.targetProvider?.companyName || "Service Provider",
+      };
+    }
+
+    return {
+      targetType: "business" as const,
+      targetUserId: engagement.fromBusiness?.user,
+      targetProfileId: engagement.fromBusiness?._id,
+      displayName: engagement.fromBusiness?.businessName || "Business",
+    };
+  };
+
+  const awaitingUserResponse = (engagement: Engagement) => {
+    if (!userType) return false;
+    if (!engagement.latestOffer?.fromRole) {
+      return userType !== "business";
+    }
+    return engagement.latestOffer.fromRole !== userType;
+  };
+
+  const canAcceptOrDecline = (engagement: Engagement) => {
+    if (!awaitingUserResponse(engagement)) return false;
+    return engagement.status === "pending" || engagement.status === "countered";
+  };
+
+  const canCounter = (engagement: Engagement) => awaitingUserResponse(engagement);
+
+const targetKey = (engagement: Engagement) => {
+  const target = getReviewTarget(engagement);
+  if (target?.targetUserId) {
+    return `${target.targetType}:${target.targetUserId}`;
+  }
+  return "";
+};
 
   useEffect(() => {
     const load = async () => {
@@ -228,12 +299,48 @@ const Engagements = () => {
     }
   };
 
-  const handlePayment = async (contract: Contract) => {
+  const handleCompleteContract = async (contractId: string) => {
     try {
-      await ApiService.createPayment({ contractId: contract._id, amount: contract.agreedPrice });
-      toast({ title: "Payment processed", description: "Payment has been recorded." });
+      await ApiService.completeContract(contractId);
+      toast({ title: "Contract completed" });
+      refreshData();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Unable to process payment", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Unable to complete contract", variant: "destructive" });
+    }
+  };
+
+  const handleReviewChange = (contractId: string, field: "rating" | "comment", value: string) => {
+    setReviewForms((prev) => ({
+      ...prev,
+      [contractId]: {
+        rating: field === "rating" ? value : prev[contractId]?.rating || "5",
+        comment: field === "comment" ? value : prev[contractId]?.comment || "",
+      },
+    }));
+  };
+
+  const handleSubmitReview = async (engagement: Engagement, contract: Contract) => {
+    const target = getReviewTarget(engagement);
+    const key = target?.targetUserId ? targetKey(engagement) : "";
+    const rating = reviewForms[contract._id]?.rating || "5";
+    const comment = reviewForms[contract._id]?.comment || "";
+
+    if (!target?.targetUserId) {
+      toast({ title: "Missing profile", description: "Unable to identify who to review.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setReviewSubmitting(contract._id);
+      await ApiService.submitReview(target.targetType, target.targetUserId, Number(rating), comment, target.targetProfileId);
+      toast({ title: "Review submitted" });
+      if (key) {
+        setReviewedTargets((prev) => ({ ...prev, [key]: true }));
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Unable to submit review", variant: "destructive" });
+    } finally {
+      setReviewSubmitting(null);
     }
   };
 
@@ -276,18 +383,19 @@ const Engagements = () => {
             )}
           </div>
           <div className="flex flex-col gap-2">
-            {isTalent && engagement.status === "pending" && (
+            {canAcceptOrDecline(engagement) && (
               <>
-                <Button onClick={() => handleAccept(engagement._id)}>Accept</Button>
-                <Button variant="outline" onClick={() => handleDecline(engagement._id)}>
-                  Decline
+                <Button onClick={() => handleAccept(engagement._id)}>
+                  {engagement.status === "countered" ? "Accept Counter" : "Accept"}
                 </Button>
-                <CounterOfferButton engagement={engagement} onSubmit={handleCounter} />
+                <Button variant="outline" onClick={() => handleDecline(engagement._id)}>
+                  {engagement.status === "countered" ? "Decline Counter" : "Decline"}
+                </Button>
               </>
             )}
 
-            {isBusiness && engagement.status === "countered" && (
-              <Button onClick={() => handleAccept(engagement._id)}>Accept Counter</Button>
+            {canCounter(engagement) && (
+              <CounterOfferButton engagement={engagement} onSubmit={handleCounter} />
             )}
 
             {engagement.contract && (
@@ -369,22 +477,35 @@ const Engagements = () => {
                     {contracts.map((contract) => (
                       <Card key={contract._id} className="p-6 flex flex-col gap-4">
                         <div>
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-2xl font-semibold text-foreground">{contract.title}</h3>
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <h3 className="text-2xl font-semibold text-foreground mr-2">{contract.title}</h3>
                             <Badge variant={contract.status === "completed" ? "secondary" : "default"}>
                               {contract.status}
                             </Badge>
+                            {contract.paymentStatus && (
+                              <Badge className={paymentBadge[contract.paymentStatus] || "bg-slate-100 text-slate-900"}>
+                                {contract.paymentStatus}
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-muted-foreground mb-4">{contract.description}</p>
                           <p className="text-sm text-muted-foreground">
                             Budget: {contract.currency} {contract.agreedPrice}
                           </p>
+                          {contract.freelancerRequestedRelease && contract.paymentStatus === "held" && isBusiness && (
+                            <p className="text-sm text-amber-600 font-semibold mt-2">
+                              Payment release requested by your partner.
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex flex-wrap gap-3">
+                          <Button variant="secondary" asChild>
+                            <Link to={`/contracts/${contract._id}`}>Open Contract</Link>
+                          </Button>
                           {isBusiness && contract.status === "active" && (
-                            <Button onClick={() => handlePayment(contract)}>
-                              <DollarSign className="mr-2 h-4 w-4" /> Make Payment
+                            <Button variant="outline" onClick={() => handleCompleteContract(contract._id)}>
+                              Mark Completed
                             </Button>
                           )}
                           <Button variant="outline" onClick={() => loadMessages(contract._id)}>
@@ -414,10 +535,11 @@ const Engagements = () => {
                             </div>
 
                             <div className="flex gap-2">
-                              <Input
+                              <Textarea
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
                                 placeholder="Type your message..."
+                                rows={2}
                               />
                               <Button onClick={sendMessage} disabled={!newMessage.trim()}>
                                 <Send className="h-4 w-4" />
@@ -434,6 +556,69 @@ const Engagements = () => {
           )}
         </div>
       </section>
+
+      {contracts.some((c) => c.status === "completed") && (
+        <section className="pb-20 px-4 sm:px-6 lg:px-8">
+          <div className="container mx-auto max-w-6xl">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {contracts.map((contract) => {
+                if (contract.status !== "completed") return null;
+                const engagement = engagements.find((eng) => eng.contract?._id === contract._id);
+                if (!engagement) return null;
+                const target = getReviewTarget(engagement);
+                const key = target?.targetUserId ? targetKey(engagement) : "";
+                if (!target?.targetUserId || (key && reviewedTargets[key])) return null;
+                return (
+                  <Card key={`review-${contract._id}`} className="p-6 space-y-4">
+                    <div>
+                      <h3 className="text-xl font-semibold">Review {target.displayName}</h3>
+                      <p className="text-sm text-muted-foreground">Share feedback to help improve future matches.</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <Label>Rating</Label>
+                        <Select
+                          value={reviewForms[contract._id]?.rating || "5"}
+                          onValueChange={(value) => handleReviewChange(contract._id, "rating", value)}
+                        >
+                          <SelectTrigger className="mt-2">
+                            <SelectValue placeholder="Select rating" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[5, 4, 3, 2, 1].map((score) => (
+                              <SelectItem key={score} value={score.toString()}>
+                                {score} Star{score === 1 ? "" : "s"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Comment</Label>
+                        <Textarea
+                          className="mt-2"
+                          rows={3}
+                          placeholder="Describe the experience..."
+                          value={reviewForms[contract._id]?.comment || ""}
+                          onChange={(e) => handleReviewChange(contract._id, "comment", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={() => handleSubmitReview(engagement, contract)}
+                        disabled={reviewSubmitting === contract._id}
+                      >
+                        {reviewSubmitting === contract._id ? "Submitting..." : "Submit Review"}
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 };

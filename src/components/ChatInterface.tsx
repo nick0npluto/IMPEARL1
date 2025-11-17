@@ -5,7 +5,11 @@ import { Send, Bot } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ApiService from "@/services/api";
 
-const ChatInterface = () => {
+interface ChatInterfaceProps {
+  context?: Record<string, any>;
+}
+
+const ChatInterface = ({ context = {} }: ChatInterfaceProps) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([
     { role: "assistant", content: "Hello! I'm IMPEARL AI. How can I help your business today?" }
@@ -22,7 +26,7 @@ const ChatInterface = () => {
     setLoading(true);
 
     try {
-      const response = await ApiService.sendSupportMessage(nextMessages);
+      const response = await ApiService.sendSupportMessage(nextMessages, context);
       const reply = response.reply || "I'm here to help!";
       setMessages([...nextMessages, { role: "assistant", content: reply }]);
     } catch (error: any) {
