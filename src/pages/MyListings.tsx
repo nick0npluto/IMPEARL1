@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,11 +52,16 @@ const MyListings = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<ListingForm>(defaultForm);
   const [profile, setProfile] = useState<any>(null);
+  const isFreelancer = user?.userType === "freelancer";
 
   useEffect(() => {
+    if (isFreelancer) {
+      setLoading(false);
+      return;
+    }
     loadListings();
     loadProfile();
-  }, []);
+  }, [isFreelancer]);
 
   const loadListings = async () => {
     try {
@@ -261,6 +267,26 @@ const MyListings = () => {
             <p className="text-muted-foreground">
               Only freelancer or service provider accounts can publish marketplace listings.
             </p>
+          </Card>
+        </section>
+      </div>
+    );
+  }
+
+  if (isFreelancer) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <section className="pt-32 pb-20 px-4">
+          <Card className="max-w-3xl mx-auto p-8 text-center space-y-4">
+            <h1 className="text-3xl font-semibold text-foreground">No Listings Needed</h1>
+            <p className="text-muted-foreground">
+              Freelancers don’t need to publish marketplace listings. Keep your profile fresh and respond to business
+              requests instead of maintaining separate listings.
+            </p>
+            <Button asChild>
+              <Link to="/dashboard">Back to dashboard</Link>
+            </Button>
           </Card>
         </section>
       </div>

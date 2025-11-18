@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,11 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import ApiService from "@/services/api";
-import { Brain } from "lucide-react";
+import { Brain, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const defaultForm = {
-  businessName: "",
   currentTools: "",
   goals: "",
   painPoints: "",
@@ -30,6 +30,7 @@ const BusinessIntake = () => {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [formData, setFormData] = useState(defaultForm);
   const [recommendations, setRecommendations] = useState<string[]>([]);
+  const profileContext = user?.businessProfile || null;
 
   useEffect(() => {
     const loadLatest = async () => {
@@ -39,7 +40,7 @@ const BusinessIntake = () => {
           setSessionId(response.session._id);
           setFormData({ ...defaultForm, ...(response.session.answers || {}) });
           setLastUpdated(response.session.updatedAt || response.session.createdAt);
-          setRecommendations(buildRecommendations(response.session.answers || defaultForm));
+          setRecommendations(buildRecommendations(response.session.answers || defaultForm, profileContext));
         }
       } catch (error) {
         // no previous session
@@ -49,7 +50,11 @@ const BusinessIntake = () => {
     };
 
     loadLatest();
-  }, []);
+  }, [profileContext]);
+
+  useEffect(() => {
+    setRecommendations(buildRecommendations(formData, profileContext));
+  }, [profileContext]);
 
   const handleChange = (field: keyof typeof defaultForm, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -65,12 +70,16 @@ const BusinessIntake = () => {
         await ApiService.updateQnaSession(sessionId, { answers: formData, derivedTags });
         toast({ title: "Updated", description: "Your requirements have been updated." });
       } else {
-        const response = await ApiService.startQnaSession({ ...formData, derivedTags });
-        setSessionId(response.session?._id || response.session?.id || null);
+        const response = await ApiService.startQnaSession(formData);
+        const newId = response.session?._id || response.session?.id || null;
+        setSessionId(newId);
+        if (newId) {
+          await ApiService.updateQnaSession(newId, { derivedTags });
+        }
         toast({ title: "Submitted", description: "Thanks! We'll generate tailored recommendations." });
       }
       setLastUpdated(new Date().toISOString());
-      setRecommendations(buildRecommendations(formData));
+      setRecommendations(buildRecommendations(formData, profileContext));
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Unable to submit", variant: "destructive" });
     } finally {
@@ -91,30 +100,67 @@ const BusinessIntake = () => {
     return Array.from(tags).slice(0, 10);
   };
 
-  const buildRecommendations = (answers: typeof defaultForm) => {
+  const buildRecommendations = (answers: typeof defaultForm, profile?: any | null) => {
     const recs: string[] = [];
+    if (profile?.industry) {
+      recs.push(`Highlight wins tied to ${profile.industry} benchmarks to attract internal buy-in.`);
+    }
     if (answers.goals) {
-      recs.push(`Focus on the goal "${answers.goals.split(/[,\n]/)[0]}" to anchor your roadmap.`);
+      recs.push(`Turn the goal "${answers.goals.split(/[,\n]/)[0]}" into a high-level KPI with two measurable milestones.`);
+    }
+    if (profile?.requiredSkills) {
+      recs.push(`Line up experts covering ${profile.requiredSkills.split(',').slice(0, 2).join(", ")} so the hand-offs stay inside IMPEARL.`);
     }
     if (answers.painPoints) {
-      recs.push(`Target automation that tackles "${answers.painPoints.split(/[,\n]/)[0]}" first for quick ROI.`);
+      recs.push(`Treat "${answers.painPoints.split(/[,\n]/)[0]}" as sprint #1—solve the loudest pain to earn confidence.`);
     }
-    if (answers.currentTools) {
-      recs.push(`Integrate new solutions with ${answers.currentTools.split(/[,\n]/).slice(0, 2).join(', ')} instead of replacing them immediately.`);
+    const stack = (answers.currentTools || profile?.currentTools || "")
+      .split(/[,\n]/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 2)
+      .join(", ");
+    if (stack) {
+      recs.push(`Integrate automations with ${stack} first so you avoid change-management drag.`);
     }
-    if (answers.timeline) {
-      recs.push(`Break work into milestones that fit the ${answers.timeline} timeline.`);
-    }
-    if (answers.preferences) {
-      recs.push(`Respect preferences like "${answers.preferences.split(/[,\n]/)[0]}" when evaluating vendors.`);
+    if (answers.timeline || profile?.preferredTimeline) {
+      recs.push(`Map delivery in waves that respect the "${answers.timeline || profile?.preferredTimeline}" expectation.`);
     }
     if (!recs.length) {
-      recs.push('Share more goals or pain points above to see tailored insights.');
+      recs.push("Share more goals or challenges above to unlock tailored insights.");
     }
     return recs;
   };
 
+  const buildCareerSuggestions = (answers: typeof defaultForm, profile?: any | null) => {
+    const baseSkills = `${profile?.requiredSkills || ""}, ${answers.preferences || ""}, ${answers.goals || ""}`;
+    const tokens = baseSkills
+      .split(/[,/]/)
+      .map((token) => token.trim())
+      .filter(Boolean);
+    if (!tokens.length) {
+      return ["Automation Strategist", "Workflow Engineer", "Lifecycle Ops Lead"];
+    }
+    return tokens.slice(0, 3).map((skill) => `${skill} Specialist`);
+  };
+
+  const buildToolSuggestions = (answers: typeof defaultForm, profile?: any | null) => {
+    const stack = `${answers.currentTools || ""} ${profile?.currentTools || ""}`.toLowerCase();
+    const suggestions = new Set<string>();
+    if (stack.includes("hubspot")) suggestions.add("HubSpot Workflows");
+    if (stack.includes("salesforce")) suggestions.add("Salesforce Flow & MuleSoft");
+    if (stack.includes("notion")) suggestions.add("Notion Automations");
+    if (stack.includes("shopify")) suggestions.add("Shopify Flow");
+    if (stack.includes("zendesk")) suggestions.add("Zendesk Macros & Sunshine");
+    suggestions.add("Zapier / Make / n8n specialists");
+    suggestions.add("Customer Data Warehouse & BI");
+    return Array.from(suggestions).slice(0, 4);
+  };
+
   const derivedTags = useMemo(() => buildDerivedTags(formData), [formData]);
+  const aiInsights = useMemo(() => buildRecommendations(formData, profileContext), [formData, profileContext]);
+  const careerIdeas = useMemo(() => buildCareerSuggestions(formData, profileContext), [formData, profileContext]);
+  const toolIdeas = useMemo(() => buildToolSuggestions(formData, profileContext), [formData, profileContext]);
 
   if (!user || user.userType !== 'business') {
     return (
@@ -161,18 +207,16 @@ const BusinessIntake = () => {
             </div>
           </div>
 
+          {profileContext && (
+            <Card className="p-6 border border-primary/20 bg-primary/5">
+              <p className="text-sm text-muted-foreground">
+                Context loaded from <span className="font-semibold text-foreground">{profileContext.businessName}</span> – industry {profileContext.industry || "N/A"}, team size {profileContext.companySize || "n/a"}.
+              </p>
+            </Card>
+          )}
+
           <Card className="p-8">
             <form className="space-y-6" onSubmit={handleSubmit}>
-              <div>
-                <Label htmlFor="businessName">Business Name</Label>
-                <Input
-                  id="businessName"
-                  value={formData.businessName}
-                  onChange={(e) => handleChange("businessName", e.target.value)}
-                  placeholder="Acme Automation Co."
-                />
-              </div>
-
               <div>
                 <Label htmlFor="currentTools">Current Tools & Systems</Label>
                 <Textarea
@@ -269,6 +313,53 @@ const BusinessIntake = () => {
                 )}
               </div>
             </form>
+          </Card>
+
+          <Card className="p-8 space-y-4">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-6 w-6 text-primary" />
+              <div>
+                <h3 className="text-xl font-semibold text-foreground">AI Insights</h3>
+                <p className="text-sm text-muted-foreground">Actionable advice tailored to your profile.</p>
+              </div>
+            </div>
+            <ul className="space-y-3 list-disc pl-5 text-sm text-muted-foreground">
+              {aiInsights.map((insight, idx) => (
+                <li key={idx}>{insight}</li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card className="p-8 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-semibold text-foreground">Careers & Tools to Explore</h3>
+                <p className="text-sm text-muted-foreground">
+                  Use these roles and platforms to build your automation squad.
+                </p>
+              </div>
+              <Button asChild>
+                <Link to="/marketplace">Visit Marketplace</Link>
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm font-semibold text-foreground mb-2 uppercase tracking-wide">Roles</p>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  {careerIdeas.map((idea, idx) => (
+                    <li key={idx}>{idea}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground mb-2 uppercase tracking-wide">Tools & Partners</p>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  {toolIdeas.map((idea, idx) => (
+                    <li key={idx}>{idea}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </Card>
 
           <Card className="p-8 space-y-4">

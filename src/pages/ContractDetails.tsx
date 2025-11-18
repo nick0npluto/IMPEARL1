@@ -46,6 +46,14 @@ const paymentBadgeMap: Record<string, string> = {
   refunded: "bg-slate-200 text-slate-900",
 };
 
+const eventLabels: Record<string, string> = {
+  checkout_started: "Checkout started",
+  payment_held: "Payment captured",
+  release_requested: "Release requested",
+  payment_released: "Payment released",
+  dispute_opened: "Dispute opened",
+};
+
 const formatCurrency = (value: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
 
@@ -75,6 +83,8 @@ const ContractDetails = () => {
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const platformFeePercent = Number(import.meta.env.VITE_PLATFORM_FEE_PERCENT ?? 10);
   const baseAmount = useMemo(() => Number(contract?.amountUsd ?? contract?.agreedPrice ?? 0), [contract]);
@@ -90,12 +100,42 @@ const ContractDetails = () => {
       : contract?.targetFreelancer?.name || "Freelancer";
   const paymentStatus = contract?.paymentStatus || "unpaid";
 
+  const describeHistory = (entry: any) => {
+    const label = eventLabels[entry.eventType] || entry.eventType;
+    if (entry.eventType === "checkout_started" && entry.details?.totalCents) {
+      return `${label}: $${(entry.details.totalCents / 100).toFixed(2)} charge created.`;
+    }
+    if (entry.eventType === "payment_released" && entry.details?.amountCents) {
+      return `${label}: $${(entry.details.amountCents / 100).toFixed(2)} sent to payee.`;
+    }
+    return label;
+  };
+
+  const loadHistory = async (contractId: string) => {
+    try {
+      setHistoryLoading(true);
+      const response = await ApiService.getContractHistory(contractId);
+      setHistory(response.history || []);
+    } catch (error: any) {
+      toast({
+        title: "Unable to load activity",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   const fetchContract = async () => {
     if (!id) return;
     try {
       setLoading(true);
       const response = await ApiService.getContract(id);
       setContract(response.contract);
+      if (response.contract?._id) {
+        loadHistory(response.contract._id);
+      }
     } catch (error: any) {
       toast({
         title: "Unable to load contract",
@@ -127,6 +167,9 @@ const ContractDetails = () => {
       setRefreshing(true);
       const response = await ApiService.getContract(id);
       setContract(response.contract);
+      if (response.contract?._id) {
+        loadHistory(response.contract._id);
+      }
     } catch (error: any) {
       toast({
         title: "Unable to refresh contract",
@@ -387,6 +430,40 @@ const ContractDetails = () => {
                 <p className="text-sm text-muted-foreground">
                   Need help? Contact support and reference this contract for faster assistance.
                 </p>
+              </Card>
+
+              <Card className="p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-xl font-semibold">Activity timeline</h3>
+                    <p className="text-sm text-muted-foreground">Track payments, release requests, and disputes.</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => contract?._id && loadHistory(contract._id)}
+                    disabled={historyLoading}
+                  >
+                    <RefreshCcw className={`mr-2 h-4 w-4 ${historyLoading ? "animate-spin" : ""}`} />
+                    Refresh
+                  </Button>
+                </div>
+                {historyLoading ? (
+                  <p className="text-muted-foreground text-sm">Loading history...</p>
+                ) : history.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No activity recorded yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {history.map((entry) => (
+                      <div key={entry._id} className="border border-border rounded-md p-3 text-sm">
+                        <p className="font-semibold text-foreground">{describeHistory(entry)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(entry.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Card>
             </>
           )}

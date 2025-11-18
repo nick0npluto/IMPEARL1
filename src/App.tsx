@@ -25,10 +25,14 @@ import BrowseJobs from "./pages/BrowseJobs";
 import Engagements from "./pages/Engagements";
 import Notifications from "./pages/Notifications";
 import BusinessIntake from "./pages/BusinessIntake";
-import CostCalculator from "./pages/CostCalculator";
-import BookmarkedFreelancers from "./pages/BookmarkedFreelancers";
+import Bookmarks from "./pages/Bookmarks";
 import ContractDetails from "./pages/ContractDetails";
 import PayoutSetup from "./pages/PayoutSetup";
+import Hires from "./pages/Hires";
+import ActiveProjects from "./pages/ActiveProjects";
+import ReviewsPage from "./pages/Reviews";
+import BusinessConnections from "./pages/BusinessConnections";
+import FreelancerProposals from "./pages/FreelancerProposals";
 import AuthGate from "@/components/AuthGate";
 import GuestGate from "@/components/GuestGate";
 
@@ -70,18 +74,21 @@ const App = () => (
           <Route path="/messages" element={<AuthGate><Messages /></AuthGate>} />
           <Route path="/freelancer/:id" element={<AuthGate><FreelancerDetail /></AuthGate>} />
           <Route path="/compare" element={<AuthGate><CompareFreelancers /></AuthGate>} />
-          <Route path="/bookmarks" element={<AuthGate><BookmarkedFreelancers /></AuthGate>} />
-          <Route path="/bookmarks" element={<BookmarkedFreelancers />} />
+          <Route path="/bookmarks" element={<AuthGate><Bookmarks /></AuthGate>} />
+          <Route path="/proposals" element={<AuthGate><FreelancerProposals /></AuthGate>} />
           
           {/* Dashboard Feature Routes */}
           <Route path="/profile" element={<AuthGate><EditProfile /></AuthGate>} />
           <Route path="/post-job" element={<AuthGate><PostJob /></AuthGate>} />
           <Route path="/jobs" element={<AuthGate><BrowseJobs /></AuthGate>} />
           <Route path="/engagements" element={<AuthGate><Engagements /></AuthGate>} />
+          <Route path="/hired" element={<AuthGate><Hires /></AuthGate>} />
+          <Route path="/projects" element={<AuthGate><ActiveProjects /></AuthGate>} />
+          <Route path="/reviews" element={<AuthGate><ReviewsPage /></AuthGate>} />
+          <Route path="/businesses" element={<AuthGate><BusinessConnections /></AuthGate>} />
           <Route path="/contracts/:id" element={<AuthGate><ContractDetails /></AuthGate>} />
           <Route path="/notifications" element={<AuthGate><Notifications /></AuthGate>} />
           <Route path="/qna" element={<AuthGate><BusinessIntake /></AuthGate>} />
-          <Route path="/calculator" element={<AuthGate><CostCalculator /></AuthGate>} />
           <Route path="/payout-setup" element={<AuthGate><PayoutSetup /></AuthGate>} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

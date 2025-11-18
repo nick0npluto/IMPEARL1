@@ -14,12 +14,9 @@ import {
   ShoppingCart,
   Store,
   PlusCircle,
-  Calculator,
   Users,
-  CreditCard,
   Bookmark,
   MessageSquare,
-  TrendingUp,
   HelpCircle,
   Bell,
   Loader2,
@@ -173,27 +170,15 @@ const ClientDashboard = () => {
       link: "/post-job",
     },
     {
-      icon: Calculator,
-      title: "Cost Calculator",
-      description: "Calculate ROI and project costs",
-      link: "/calculator",
-    },
-    {
       icon: Users,
-      title: "Hired Freelancers",
-      description: "Manage your active contracts and team",
+      title: "Hired Talent",
+      description: "See freelancers & service providers you've hired",
       link: "/hired",
     },
     {
-      icon: CreditCard,
-      title: "Pay Center",
-      description: "Process payments and manage invoices",
-      link: "/payments",
-    },
-    {
       icon: Bookmark,
-      title: "Bookmarked Freelancers",
-      description: "Your saved freelancers for future projects",
+      title: "Bookmarks",
+      description: "Saved freelancers and service providers",
       link: "/bookmarks",
     },
     {
@@ -207,12 +192,6 @@ const ClientDashboard = () => {
       title: "Support",
       description: "Get help from our team",
       link: "/support",
-    },
-    {
-      icon: TrendingUp,
-      title: "Analytics",
-      description: "Track automation performance and ROI",
-      link: "/analytics",
     },
   ];
 

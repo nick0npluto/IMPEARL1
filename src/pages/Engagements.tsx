@@ -255,7 +255,9 @@ const targetKey = (engagement: Engagement) => {
     setMessageLoading(true);
     try {
       const response = await ApiService.getMessages(contractId);
-      setMessages((prev) => ({ ...prev, [contractId]: response.messages || [] }));
+      if (!response?.notModified) {
+        setMessages((prev) => ({ ...prev, [contractId]: response.messages || [] }));
+      }
       setActiveContractId(contractId);
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Unable to load messages", variant: "destructive" });

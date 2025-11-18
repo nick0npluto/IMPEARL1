@@ -26,21 +26,35 @@ const BusinessProfile = () => {
   const [formData, setFormData] = useState({
     businessName: "",
     industry: "",
+    customIndustry: "",
     companySize: "",
+    budgetRange: "",
     goals: "",
     requiredSkills: "",
     website: "",
     description: "",
+    currentTools: "",
+    challenges: "",
+    preferredTimeline: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
-    if (!formData.businessName || !formData.industry || !formData.goals) {
+    if (!formData.businessName || !formData.industry || !formData.goals || !formData.requiredSkills || !formData.description) {
       toast({
         title: "Missing Required Fields",
-        description: "Please fill in business name, industry, and goals/objectives.",
+        description: "Please fill in business name, industry, goals, required skills, and company description.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.industry === "other" && !formData.customIndustry.trim()) {
+      toast({
+        title: "Industry required",
+        description: "Please describe your industry when selecting Other.",
         variant: "destructive",
       });
       return;
@@ -130,6 +144,16 @@ const BusinessProfile = () => {
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
+                {formData.industry === "other" && (
+                  <Input
+                    className="mt-3"
+                    placeholder="Describe your industry"
+                    value={formData.customIndustry}
+                    onChange={(e) => setFormData({ ...formData, customIndustry: e.target.value })}
+                    disabled={loading}
+                    required
+                  />
+                )}
               </div>
 
               <div>
@@ -155,6 +179,28 @@ const BusinessProfile = () => {
               </div>
 
               <div>
+                <Label htmlFor="budgetRange" className="text-foreground">
+                  Typical Budget Range
+                </Label>
+                <Select
+                  value={formData.budgetRange}
+                  onValueChange={(value) => setFormData({ ...formData, budgetRange: value })}
+                  disabled={loading}
+                >
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Select budget range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="under-10k">Under $10k</SelectItem>
+                    <SelectItem value="10k-25k">$10k - $25k</SelectItem>
+                    <SelectItem value="25k-50k">$25k - $50k</SelectItem>
+                    <SelectItem value="50k-100k">$50k - $100k</SelectItem>
+                    <SelectItem value="100k-plus">$100k+</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label htmlFor="goals" className="text-foreground">
                   Goals & Objectives <span className="text-destructive">*</span>
                 </Label>
@@ -171,18 +217,19 @@ const BusinessProfile = () => {
 
               <div>
                 <Label htmlFor="requiredSkills" className="text-foreground">
-                  Required Skills
+                  Required Skills <span className="text-destructive">*</span>
                 </Label>
-                <Input
+                <Textarea
                   id="requiredSkills"
                   value={formData.requiredSkills}
                   onChange={(e) => setFormData({ ...formData, requiredSkills: e.target.value })}
                   placeholder="e.g., AI integration, workflow automation, data analysis"
-                  className="mt-2"
+                  className="mt-2 min-h-[100px]"
+                  required
                   disabled={loading}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  Separate skills with commas
+                  Separate skills or capability needs with commas
                 </p>
               </div>
 
@@ -202,15 +249,58 @@ const BusinessProfile = () => {
               </div>
 
               <div>
+                <Label htmlFor="currentTools" className="text-foreground">
+                  Current Tools & Stack
+                </Label>
+                <Textarea
+                  id="currentTools"
+                  value={formData.currentTools}
+                  onChange={(e) => setFormData({ ...formData, currentTools: e.target.value })}
+                  placeholder="List CRMs, automations, analytics platforms, homegrown tools, spreadsheets, etc."
+                  className="mt-2 min-h-[100px]"
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="challenges" className="text-foreground">
+                  Biggest Challenges
+                </Label>
+                <Textarea
+                  id="challenges"
+                  value={formData.challenges}
+                  onChange={(e) => setFormData({ ...formData, challenges: e.target.value })}
+                  placeholder="Where are you stuck? e.g., manual lead intake, disconnected systems, lack of reporting"
+                  className="mt-2 min-h-[100px]"
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="preferredTimeline" className="text-foreground">
+                  Preferred Timeline
+                </Label>
+                <Input
+                  id="preferredTimeline"
+                  value={formData.preferredTimeline}
+                  onChange={(e) => setFormData({ ...formData, preferredTimeline: e.target.value })}
+                  placeholder="e.g., Kickoff next month, deliver over 6 weeks"
+                  className="mt-2"
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
                 <Label htmlFor="description" className="text-foreground">
-                  Company Description (Optional)
+                  Company Description <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Tell us more about your company..."
-                  className="mt-2 min-h-[120px]"
+                  placeholder="Tell us about your team, customers, and current operations"
+                  className="mt-2 min-h-[150px]"
+                  required
                   disabled={loading}
                 />
               </div>
