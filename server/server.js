@@ -28,7 +28,11 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log('MongoDB Connected Successfully'))
+  .then(() => {
+    if (process.env.NODE_ENV !== 'test') {
+      console.log('MongoDB Connected Successfully');
+    }
+  })
   .catch((err) => console.error('MongoDB Connection Error:', err));
 
 // Routes
@@ -89,9 +93,12 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// Only start the listener when not under test to avoid port conflicts in Jest/Supertest
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
 
 module.exports = app;
