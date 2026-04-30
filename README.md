@@ -1,3 +1,7 @@
+Screenshots:
+<img width="1470" height="828" alt="Screenshot 2026-04-30 at 1 59 32 AM" src="https://github.com/user-attachments/assets/5d4b7956-1037-4298-abec-59080c090e5d" />
+
+
 # IMPEARL
 
 AI-Driven Business Automation & Freelancer Platform
